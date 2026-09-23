@@ -113,7 +113,7 @@ export default function Page() {
         {aba === "painel" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <Resumo titulo="Renda total" valor={rendaTotal} />
+              <Resumo titulo="Renda fixa mensal" valor={RENDA} />
               <Resumo titulo="Entradas extras" valor={totalEntradas} />
               <Resumo titulo="Fixos" valor={FIXOS} />
               <Resumo titulo="Gastos" valor={totalGastos} />
@@ -126,8 +126,12 @@ export default function Page() {
                 {saldo < 0 ? "No vermelho" : saldo < 100 ? "Atenção" : "No azul"}
               </h2>
               <p className="mt-2 text-sm text-zinc-600">
-                {saldo < 0 ? "Você ultrapassou sua renda em " + brl(Math.abs(saldo)) + "." : "Você ainda tem " + brl(saldo) + " disponível neste ciclo."}
+                {saldo < 0 ? "Você ultrapassou sua renda disponível em " + brl(Math.abs(saldo)) + "." : "Você ainda tem " + brl(saldo) + " disponível neste ciclo."}
               </p>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Renda fixa</span><strong>{brl(RENDA)}</strong></div>
+                <div className="rounded-xl bg-emerald-50 p-3"><span className="block text-zinc-500">Entradas extras</span><strong className="text-emerald-700">{brl(totalEntradas)}</strong></div>
+              </div>
             </div>
 
             <div className={card}>
@@ -150,7 +154,7 @@ export default function Page() {
 
             <div className={card}>
               <h2 className="text-lg font-semibold">Entradas extras deste ciclo</h2>
-              <p className="mt-1 text-sm text-zinc-500">Salário fixo mensal: {brl(RENDA)}</p>
+              <p className="mt-1 text-sm text-zinc-500">Aqui aparecem somente valores avulsos. A renda fixa mensal de {brl(RENDA)} fica separada no painel.</p>
               {entradas.length === 0 && <p className="mt-3 text-sm text-zinc-500">Nenhuma entrada extra lançada.</p>}
               {entradas.map((e) => (
                 <div key={e.id} className="flex items-center justify-between border-b border-zinc-100 py-3">
