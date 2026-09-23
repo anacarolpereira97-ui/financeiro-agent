@@ -270,25 +270,25 @@ export default function Page() {
     e.currentTarget.reset();
   }
 
-  const card = "rounded-3xl border border-[#F8B6D8]/70 bg-white/95 p-5 shadow-sm shadow-[#F8B6D8]/40";
-  const field = "mt-1 w-full rounded-xl border border-[#F8B6D8] bg-white px-3 py-3 text-[#4A1F2D] outline-none transition placeholder:text-[#9C7281] focus:border-[#F04AA8] focus:ring-2 focus:ring-[#FFF1F7]";
+  const card = "rounded-2xl border border-[#F8B6D8]/70 bg-white/95 p-4 shadow-sm shadow-[#F8B6D8]/40 sm:rounded-3xl sm:p-5";
+  const field = "mt-1 w-full rounded-xl border border-[#F8B6D8] bg-white px-3 py-3 text-base text-[#4A1F2D] outline-none transition placeholder:text-[#9C7281] focus:border-[#F04AA8] focus:ring-2 focus:ring-[#FFF1F7] sm:text-sm";
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#FFF1F7] via-white to-[#FDEBEC] text-[#4A1F2D]">
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="rounded-[32px] bg-gradient-to-br from-[#F04AA8] via-[#E64B78] to-[#D93A4A] p-6 text-white shadow-lg shadow-[#F8B6D8]/60">
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-6 sm:py-6">
+        <div className="rounded-2xl bg-gradient-to-br from-[#F04AA8] via-[#E64B78] to-[#D93A4A] p-4 text-white shadow-lg shadow-[#F8B6D8]/60 sm:rounded-[32px] sm:p-6">
           <p className="text-sm text-[#FFEAF4]">Visão financeira • ciclo do dia 10 ao dia 9</p>
-          <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
-          <p className="mt-2 text-sm text-[#FFEAF4]">Saldo inicial: R$ 0,00. A renda fixa de R$ 1.000,00 entra automaticamente no caixa no 5º dia útil de cada mês, a partir de outubro/2026.</p>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Dinheiro em caixa</span><strong className="text-xl">{brl(dinheiroCaixa)}</strong></div>
-            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Extra recebido</span><strong className="text-xl">{brl(totalEntradasRecebidas)}</strong><span className="mt-1 block text-xs text-[#FFEAF4]/80">A receber: {brl(totalAReceber)}</span></div>
-            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Parcelas futuras</span><strong className="text-xl">{brl(totalParcelasFuturas)}</strong></div>
-            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Próx. 90 dias</span><strong className="text-xl">{brl(total90Dias)}</strong></div>
+          <h1 className="mt-1 text-2xl font-bold leading-tight sm:text-3xl">Minha IA Financeira</h1>
+          <p className="mt-2 text-xs leading-relaxed text-[#FFEAF4] sm:text-sm">Saldo inicial: R$ 0,00. A renda fixa de R$ 1.000,00 entra automaticamente no caixa no 5º dia útil de cada mês, a partir de outubro/2026.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Dinheiro em caixa</span><strong className="block break-words text-lg leading-tight sm:text-xl">{brl(dinheiroCaixa)} </strong></div>
+            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Extra recebido</span><strong className="block break-words text-lg leading-tight sm:text-xl">{brl(totalEntradasRecebidas)} </strong><span className="mt-1 block text-xs text-[#FFEAF4]/80">A receber: {brl(totalAReceber)}</span></div>
+            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Parcelas futuras</span><strong className="block break-words text-lg leading-tight sm:text-xl">{brl(totalParcelasFuturas)} </strong></div>
+            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Próx. 90 dias</span><strong className="block break-words text-lg leading-tight sm:text-xl">{brl(total90Dias)} </strong></div>
           </div>
         </div>
 
-        <div className="my-5 flex gap-2 overflow-x-auto">
+        <div className="my-4 flex snap-x gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:my-5">
           {[
             ["painel","Painel"],
             ["entradas","Entradas"],
@@ -300,7 +300,7 @@ export default function Page() {
               key={id}
               type="button"
               onClick={() => setAba(id)}
-              className={"whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium " + (aba === id ? "bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] text-white shadow-sm" : "border border-[#F8B6D8]/70 bg-white text-[#7A3148] hover:bg-[#FFF1F7]")}
+              className={"min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-medium " + (aba === id ? "bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] text-white shadow-sm" : "border border-[#F8B6D8]/70 bg-white text-[#7A3148] hover:bg-[#FFF1F7]")}
             >
               {label}
             </button>
@@ -309,7 +309,7 @@ export default function Page() {
 
         {aba === "painel" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
               <Resumo titulo="Renda fixa recebida" valor={rendaFixaRecebida} />
               <Resumo titulo="Dinheiro extra recebido" valor={saldoExtra} />
               <Resumo titulo="Entradas extras a receber" valor={totalAReceber} />
@@ -326,20 +326,20 @@ export default function Page() {
               <p className="mt-2 text-sm text-[#6A3B4B]">
                 O dinheiro em caixa é {brl(dinheiroCaixa)} e soma tudo que realmente entrou: renda fixa recebida + entradas extras recebidas, descontando os pagamentos já marcados como pagos.
               </p>
-              <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
-                <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Extra recebido</span><strong className="text-[#C43A72]">{brl(totalEntradasRecebidas)}</strong></div>
-                <div className="rounded-xl bg-[#FDEBEC] p-3"><span className="block text-[#7A5260]">Total em caixa</span><strong className="text-[#D93A4A]">{brl(dinheiroCaixa)}</strong></div>
+              <div className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 sm:gap-3">
+                <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Renda fixa recebida</span><strong className="break-words"> {brl(rendaFixaRecebida)} </strong></div>
+                <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Extra recebido</span><strong className="text-[#C43A72]">{brl(totalEntradasRecebidas)} </strong></div>
+                <div className="rounded-xl bg-[#FDEBEC] p-3"><span className="block text-[#7A5260]">Total em caixa</span><strong className="text-[#D93A4A]">{brl(dinheiroCaixa)} </strong></div>
               </div>
             </div>
 
             <div className={card}>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div>
                   <h2 className="font-semibold text-[#4A1F2D]">Próximos pagamentos</h2>
                   <p className="mt-1 text-xs text-[#7A5260]">Parcelas futuras + terapia + placas solares.</p>
                 </div>
-                <strong>{brl(totalParcelasFuturas + totalAtrasado + totalCompromissosPendentes)}</strong>
+                <strong className="break-words"> {brl(totalParcelasFuturas + totalAtrasado + totalCompromissosPendentes)} </strong>
               </div>
 
               {(proximasParcelas.length + parcelasAtrasadas.length + (totalCompromissosPendentes > 0 ? 1 : 0)) === 0 ? (
@@ -355,12 +355,12 @@ export default function Page() {
                         </div>
                         <p className="mt-1 text-xs text-[#7A5260]">Vencimento todo dia 10 • pendente</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <strong>{brl(370)}</strong>
+                      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                        <strong className="break-words"> {brl(370)} </strong>
                         <button
                           type="button"
                           onClick={() => setControleCompromissos((x) => ({...x, [compromissosKeys.solar]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
-                          className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
+                          className="min-h-10 rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-xs font-medium text-white sm:min-h-0 sm:px-3"
                         >
                           Pagar
                         </button>
@@ -377,12 +377,12 @@ export default function Page() {
                         </div>
                         <p className="mt-1 text-xs text-[#7A5260]">Vencimento todo dia 10 • 2 sessões por mês • pendente</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <strong>{brl(320)}</strong>
+                      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                        <strong className="break-words"> {brl(320)} </strong>
                         <button
                           type="button"
                           onClick={() => setControleCompromissos((x) => ({...x, [compromissosKeys.terapia]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
-                          className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
+                          className="min-h-10 rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-xs font-medium text-white sm:min-h-0 sm:px-3"
                         >
                           Pagar
                         </button>
@@ -391,15 +391,15 @@ export default function Page() {
                   )}
 
                   {[...parcelasAtrasadas, ...proximasParcelas].slice(0, 8).map((p) => (
-                    <div key={p.gastoId + "-" + p.numero} className="flex items-center justify-between rounded-xl bg-[#FFF1F7]/80 p-3">
+                    <div key={p.gastoId + "-" + p.numero} className="flex flex-col gap-3 rounded-xl bg-[#FFF1F7]/80 p-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-medium">{p.descricao}</p>
                         <p className="text-xs text-[#7A5260]">Parcela {p.numero}/{p.total} • {p.vencimento.split("-").reverse().join("/")} • {p.status === "atrasada" ? "Em atraso" : "Pendente"}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <strong>{brl(p.valor)}</strong>
-                        <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], pago: true, excluido: false}}))} className="rounded-lg bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-2.5 py-1.5 text-xs font-medium text-white">Pagar</button>
-                        <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], excluido: true, pago: false}}))} className="rounded-lg border border-[#F8B6D8]/70 px-2.5 py-1.5 text-xs font-medium text-[#6A3145]">Excluir</button>
+                      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                        <strong className="break-words"> {brl(p.valor)} </strong>
+                        <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], pago: true, excluido: false}}))} className="min-h-10 flex-1 rounded-lg bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white sm:min-h-0 sm:flex-none sm:px-2.5 sm:py-1.5">Pagar</button>
+                        <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], excluido: true, pago: false}}))} className="min-h-10 flex-1 rounded-lg border border-[#F8B6D8]/70 px-3 py-2 text-xs font-medium text-[#6A3145] sm:min-h-0 sm:flex-none sm:px-2.5 sm:py-1.5">Excluir</button>
                       </div>
                     </div>
                   ))}
@@ -433,27 +433,27 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2 xl:gap-5">
               <div className="space-y-5">
                 <div className={card}>
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                     <div>
                       <h3 className="font-semibold text-[#4A1F2D]">Renda fixa projetada</h3>
                       <p className="mt-1 text-sm text-[#7A5260]">
                         R$ 1.000,00 no 5º dia útil de cada mês. O sistema pula sábados, domingos e feriados e adiciona automaticamente ao caixa quando a data chegar.
                       </p>
                     </div>
-                    <strong className="text-[#C43A72]">{brl(RENDA_FIXA)}</strong>
+                    <strong className="text-[#C43A72]">{brl(RENDA_FIXA)} </strong>
                   </div>
 
                   <div className="mt-4 space-y-3">
                     {proximosRecebimentosFixos.map((item) => (
-                      <div key={item.data} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4">
+                      <div key={item.data} className="flex flex-col gap-2 rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="font-medium">Renda fixa mensal</p>
                           <p className="mt-1 text-xs text-[#7A5260]">5º dia útil calculado: {formatDate(item.data)}</p>
                         </div>
-                        <strong>{brl(item.valor)}</strong>
+                        <strong className="break-words"> {brl(item.valor)} </strong>
                       </div>
                     ))}
                   </div>
@@ -487,7 +487,7 @@ export default function Page() {
                     </span>
                   </label>
 
-                  <button className="w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">
+                  <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">
                     Adicionar entrada
                   </button>
                 </form>
@@ -500,7 +500,7 @@ export default function Page() {
                         Projeção até o momento em que você marcar o recebimento.
                       </p>
                     </div>
-                    <div className="flex gap-2 text-xs">
+                    <div className="flex flex-wrap gap-2 text-xs">
                       <span className="rounded-full bg-[#FDEBEC] px-3 py-1.5 font-medium text-[#B82F3E]">
                         A receber: {brl(totalAReceber)}
                       </span>
@@ -539,7 +539,7 @@ export default function Page() {
                                 <strong className={"text-xl font-bold " + (e.recebido ? "text-[#C43A72]" : "text-[#4A1F2D]")}>
                                   {brl(e.valor)}
                                 </strong>
-                                <div className="flex gap-2">
+                                <div className="flex w-full gap-2 sm:w-auto">
                                   {!e.recebido && (
                                     <button
                                       type="button"
@@ -572,12 +572,12 @@ export default function Page() {
         {aba === "gastos" && (
           <div className="grid gap-4 md:grid-cols-2">
             <div className={card + " md:col-span-2"}>
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <div>
                   <h2 className="font-semibold text-[#4A1F2D]">Compromissos fixos</h2>
                   <p className="mt-1 text-xs text-[#7A5260]">Vencimento do ciclo: dia 10. Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
                 </div>
-                <strong>{brl(690)}</strong>
+                <strong className="break-words"> {brl(690)} </strong>
               </div>
 
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -601,13 +601,13 @@ export default function Page() {
                             <p className="mt-1 text-xs text-[#C43A72]">Pago em {String(controleCompromissos[comp.id]?.pagoEm).split("-").reverse().join("/")}</p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <strong>{brl(comp.valor)}</strong>
+                        <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                          <strong className="break-words"> {brl(comp.valor)} </strong>
                           {!pago ? (
                             <button
                               type="button"
                               onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
-                              className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
+                              className="min-h-10 rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-xs font-medium text-white sm:min-h-0 sm:px-3"
                             >
                               Pagar
                             </button>
@@ -639,14 +639,14 @@ export default function Page() {
               </label>
               <label className="block text-sm">Quantidade de parcelas<input name="parcelas" type="number" min="1" defaultValue="1" className={field} /></label>
               <label className="block text-sm">Vencimento da 1ª parcela<input name="vencimento" type="date" className={field} /><span className="mt-1 block text-xs text-[#7A5260]">As demais parcelas serão projetadas mês a mês automaticamente.</span></label>
-              <button className="w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">Adicionar gasto</button>
+              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">Adicionar gasto</button>
             </form>
 
             <div className={card}>
               <h2 className="text-lg font-semibold text-[#4A1F2D]">Gastos deste ciclo</h2>
               {gastos.length === 0 && <p className="mt-3 text-sm text-[#7A5260]">Nenhum gasto lançado.</p>}
               {gastos.map((g) => (
-                <div key={g.id} className="flex items-center justify-between border-b border-[#F8B6D8]/50 py-3">
+                <div key={g.id} className="flex flex-col gap-2 border-b border-[#F8B6D8]/50 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <span className="font-medium">{g.descricao}</span>
                     <p className="text-xs text-[#7A5260]">
@@ -655,7 +655,7 @@ export default function Page() {
                     </p>
                   </div>
                   <div>
-                    <strong>{brl(g.valor)}</strong>
+                    <strong className="break-words"> {brl(g.valor)} </strong>
                     <button type="button" onClick={() => setGastos((x) => x.filter((i) => i.id !== g.id))} className="ml-3 text-xs text-[#B82F3E]">Excluir</button>
                   </div>
                 </div>
@@ -670,17 +670,17 @@ export default function Page() {
               ) : (
                 <div className="mt-3 grid gap-3 lg:grid-cols-2">
                   {parcelasAtivas.map((p) => (
-                    <div key={p.gastoId + "-proj-" + p.numero} className="flex items-center justify-between rounded-xl border border-[#F8B6D8]/70 p-3">
+                    <div key={p.gastoId + "-proj-" + p.numero} className="flex flex-col gap-3 rounded-xl border border-[#F8B6D8]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-medium">{p.descricao}</p>
                         <p className="text-xs text-[#7A5260]">Parcela {p.numero}/{p.total} • vence {p.vencimento.split("-").reverse().join("/")} • {p.status === "paga" ? "Paga" : p.status === "atrasada" ? "Em atraso" : "Pendente"}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <strong>{brl(p.valor)}</strong>
+                      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                        <strong className="break-words"> {brl(p.valor)} </strong>
                         {p.status !== "paga" && (
                           <>
-                            <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], pago: true, excluido: false}}))} className="rounded-lg bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-2.5 py-1.5 text-xs font-medium text-white">Pagar</button>
-                            <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], excluido: true, pago: false}}))} className="rounded-lg border border-[#F8B6D8]/70 px-2.5 py-1.5 text-xs font-medium text-[#6A3145]">Excluir</button>
+                            <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], pago: true, excluido: false}}))} className="min-h-10 flex-1 rounded-lg bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white sm:min-h-0 sm:flex-none sm:px-2.5 sm:py-1.5">Pagar</button>
+                            <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], excluido: true, pago: false}}))} className="min-h-10 flex-1 rounded-lg border border-[#F8B6D8]/70 px-3 py-2 text-xs font-medium text-[#6A3145] sm:min-h-0 sm:flex-none sm:px-2.5 sm:py-1.5">Excluir</button>
                           </>
                         )}
                       </div>
@@ -706,20 +706,20 @@ export default function Page() {
                   <option value="1">Baixa</option>
                 </select>
               </label>
-              <button className="w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">Adicionar dívida</button>
+              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">Adicionar dívida</button>
             </form>
 
             <div className={card}>
               <h2 className="text-lg font-semibold text-[#4A1F2D]">Dívidas cadastradas</h2>
               {dividas.length === 0 && <p className="mt-3 text-sm text-[#7A5260]">Nenhuma dívida cadastrada.</p>}
               {dividas.map((d) => (
-                <div key={d.id} className="flex items-center justify-between border-b border-[#F8B6D8]/50 py-3">
+                <div key={d.id} className="flex flex-col gap-2 border-b border-[#F8B6D8]/50 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <strong>{d.nome}</strong>
                     <p className="text-xs text-[#7A5260]">Prioridade {d.prioridade === 3 ? "alta" : d.prioridade === 2 ? "média" : "baixa"}</p>
                   </div>
                   <div>
-                    <strong>{brl(d.valor)}</strong>
+                    <strong className="break-words"> {brl(d.valor)} </strong>
                     <button type="button" onClick={() => setDividas((x) => x.filter((i) => i.id !== d.id))} className="ml-3 text-xs text-[#B82F3E]">Excluir</button>
                   </div>
                 </div>
@@ -754,9 +754,9 @@ export default function Page() {
 
 function Resumo({ titulo, valor, escuro = false }: { titulo: string; valor: number; escuro?: boolean }) {
   return (
-    <div className={"flex min-h-[150px] flex-col justify-between rounded-3xl border p-5 shadow-sm " + (escuro ? "border-[#D93A4A] bg-gradient-to-br from-[#F04AA8] to-[#D93A4A] text-white" : "border-[#F8B6D8]/70 bg-white")}>
+    <div className={"flex min-h-[110px] min-w-0 flex-col justify-between rounded-2xl border p-4 shadow-sm sm:min-h-[150px] sm:rounded-3xl sm:p-5 " + (escuro ? "border-[#D93A4A] bg-gradient-to-br from-[#F04AA8] to-[#D93A4A] text-white" : "border-[#F8B6D8]/70 bg-white")}>
       <p className="text-xs opacity-70">{titulo}</p>
-      <p className="mt-1 text-xl font-bold">{brl(valor)}</p>
+      <p className="mt-2 break-words text-lg font-bold leading-tight sm:text-xl">{brl(valor)}</p>
     </div>
   );
 }
