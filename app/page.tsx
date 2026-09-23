@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Gasto = { id: string; descricao: string; valor: number; forma: "avista" | "parcelado"; parcelas: number; vencimento: string };
-type Entrada = { id: string; descricao: string; valor: number; data: string; recebido?: boolean; recebidoEm?: string };
+type Entrada = { id: string; descricao: string; valor: number; data: string; recebido?: boolean; recebidoEm?: string; recebidoValor?: number };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
 type ParcelaProjetada = { key: string; gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string; status: "pendente" | "atrasada" | "paga" | "excluida" };
 
@@ -21,6 +21,11 @@ function isoDate(date: Date) {
 
 function formatDate(value: string) {
   return value ? value.split("-").reverse().join("/") : "—";
+}
+
+function valorRecebidoEntrada(entrada: Entrada) {
+  const valor = entrada.recebidoValor ?? (entrada.recebido ? entrada.valor : 0);
+  return Math.min(entrada.valor, Math.max(0, valor));
 }
 
 function easterSunday(year: number) {
@@ -97,6 +102,8 @@ export default function Page() {
   const [controleParcelas, setControleParcelas] = useState<Record<string, { pago?: boolean; excluido?: boolean }>>({});
   const [controleCompromissos, setControleCompromissos] = useState<Record<string, { pago?: boolean; pagoEm?: string }>>({});
   const [carregado, setCarregado] = useState(false);
+  const [editandoEntrada, setEditandoEntrada] = useState<string | null>(null);
+  const [edicaoEntrada, setEdicaoEntrada] = useState({ descricao: "", valor: "", data: "", recebidoValor: "" });
 
   useEffect(() => {
     try {
@@ -118,8 +125,8 @@ export default function Page() {
     localStorage.setItem("fin_controle_compromissos", JSON.stringify(controleCompromissos));
   }, [gastos, entradas, dividas, controleParcelas, controleCompromissos, carregado]);
 
-  const totalEntradasRecebidas = useMemo(() => entradas.filter((e) => e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
-  const totalAReceber = useMemo(() => entradas.filter((e) => !e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
+  const totalEntradasRecebidas = useMemo(() => entradas.reduce((s, e) => s + valorRecebidoEntrada(e), 0), [entradas]);
+  const totalAReceber = useMemo(() => entradas.reduce((s, e) => s + Math.max(0, e.valor - valorRecebidoEntrada(e)), 0), [entradas]);
   const hoje = new Date();
   const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   const inicioCiclo = hoje.getDate() >= 10
@@ -254,8 +261,39 @@ export default function Page() {
     const valor = Number(f.get("valor"));
     const data = String(f.get("data") || "");
     if (!descricao || !Number.isFinite(valor) || valor <= 0) return;
-    setEntradas((x) => [...x, { id: crypto.randomUUID(), descricao, valor, data, recebido: false }]);
+    setEntradas((x) => [...x, { id: crypto.randomUUID(), descricao, valor, data, recebido: false, recebidoValor: 0 }]);
     e.currentTarget.reset();
+  }
+
+  function iniciarEdicaoEntrada(entrada: Entrada) {
+    setEditandoEntrada(entrada.id);
+    setEdicaoEntrada({
+      descricao: entrada.descricao,
+      valor: String(entrada.valor),
+      data: entrada.data || "",
+      recebidoValor: String(valorRecebidoEntrada(entrada)),
+    });
+  }
+
+  function salvarEdicaoEntrada(id: string) {
+    const descricao = edicaoEntrada.descricao.trim();
+    const valor = Number(edicaoEntrada.valor);
+    const recebidoValor = Math.min(valor, Math.max(0, Number(edicaoEntrada.recebidoValor || 0)));
+    if (!descricao || !Number.isFinite(valor) || valor <= 0 || !Number.isFinite(recebidoValor)) return;
+
+    setEntradas((x) => x.map((entrada) => {
+      if (entrada.id !== id) return entrada;
+      return {
+        ...entrada,
+        descricao,
+        valor,
+        data: edicaoEntrada.data,
+        recebidoValor,
+        recebido: recebidoValor >= valor,
+        recebidoEm: recebidoValor > 0 ? (entrada.recebidoEm || isoDate(new Date())) : undefined,
+      };
+    }));
+    setEditandoEntrada(null);
   }
 
   function addDivida(e: FormEvent<HTMLFormElement>) {
@@ -424,13 +462,13 @@ export default function Page() {
               <div className="rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7] p-4 shadow-sm shadow-[#F8B6D8]/30">
                 <p className="text-xs font-medium uppercase tracking-wide text-[#7A5260]">Renda extra recebida</p>
                 <p className="mt-2 text-2xl font-bold text-[#C43A72]">{brl(totalEntradasRecebidas)}</p>
-                <p className="mt-1 text-xs text-[#7A5260]">Valores que você já marcou como recebidos.</p>
+                <p className="mt-1 text-xs text-[#7A5260]">Inclui recebimentos totais e parciais.</p>
               </div>
 
               <div className="rounded-2xl border border-[#F06A75]/30 bg-[#FDEBEC] p-4 shadow-sm shadow-[#F8B6D8]/30">
                 <p className="text-xs font-medium uppercase tracking-wide text-[#7A5260]">Renda extra a receber</p>
                 <p className="mt-2 text-2xl font-bold text-[#B82F3E]">{brl(totalAReceber)}</p>
-                <p className="mt-1 text-xs text-[#7A5260]">Lançamentos que ainda não entraram no caixa.</p>
+                <p className="mt-1 text-xs text-[#7A5260]">Saldo que ainda falta receber.</p>
               </div>
             </div>
 
@@ -439,7 +477,7 @@ export default function Page() {
                 <div>
                   <h2 className="text-lg font-semibold text-[#4A1F2D]">Renda extra</h2>
                   <p className="mt-1 text-sm leading-relaxed text-[#7A5260]">
-                    Lance honorários ou outros valores. O lançamento fica como previsão e só entra no caixa quando você clicar em Receber.
+                    Lance honorários ou outros valores. O lançamento fica como previsão e só entra no caixa conforme você registrar o recebimento.
                   </p>
                 </div>
 
@@ -468,7 +506,7 @@ export default function Page() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-[#4A1F2D]">Rendas extras lançadas</h2>
-                    <p className="mt-1 text-sm text-[#7A5260]">Acompanhe o que está previsto e o que já entrou no caixa.</p>
+                    <p className="mt-1 text-sm text-[#7A5260]">Edite o valor recebido quando houver pagamento parcial.</p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
                     <span className="rounded-full bg-[#FDEBEC] px-3 py-1.5 font-medium text-[#B82F3E]">A receber: {brl(totalAReceber)}</span>
@@ -486,46 +524,131 @@ export default function Page() {
                     {entradas
                       .slice()
                       .sort((a, b) => (a.data || "9999-12-31").localeCompare(b.data || "9999-12-31"))
-                      .map((e) => (
-                        <div key={e.id} className="rounded-2xl border border-[#F8B6D8]/70 bg-white p-4">
-                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <strong className="break-words">{e.descricao}</strong>
-                                <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (e.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
-                                  {e.recebido ? "Recebido" : "A receber"}
-                                </span>
-                              </div>
-                              <p className="mt-1 text-xs text-[#7A5260]">{e.data ? "Previsto para " + formatDate(e.data) : "Sem data prevista"}</p>
-                              {e.recebido && e.recebidoEm && (
-                                <p className="mt-1 text-xs font-medium text-[#C43A72]">Recebido em {formatDate(e.recebidoEm)}</p>
-                              )}
-                            </div>
+                      .map((e) => {
+                        const recebido = valorRecebidoEntrada(e);
+                        const restante = Math.max(0, e.valor - recebido);
+                        const status = recebido >= e.valor ? "Recebido" : recebido > 0 ? "Recebido parcialmente" : "A receber";
 
-                            <div className="flex flex-col gap-3 sm:items-end">
-                              <strong className={"text-xl font-bold " + (e.recebido ? "text-[#C43A72]" : "text-[#4A1F2D]")}>{brl(e.valor)}</strong>
-                              <div className="flex w-full gap-2 sm:w-auto">
-                                {!e.recebido && (
+                        return (
+                          <div key={e.id} className="rounded-2xl border border-[#F8B6D8]/70 bg-white p-4">
+                            {editandoEntrada === e.id ? (
+                              <div className="space-y-3">
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <label className="block text-sm font-medium">
+                                    Descrição
+                                    <input
+                                      value={edicaoEntrada.descricao}
+                                      onChange={(ev) => setEdicaoEntrada((x) => ({...x, descricao: ev.target.value}))}
+                                      className={field}
+                                    />
+                                  </label>
+                                  <label className="block text-sm font-medium">
+                                    Valor total (R$)
+                                    <input
+                                      value={edicaoEntrada.valor}
+                                      onChange={(ev) => setEdicaoEntrada((x) => ({...x, valor: ev.target.value}))}
+                                      type="number"
+                                      step="0.01"
+                                      min="0.01"
+                                      className={field}
+                                    />
+                                  </label>
+                                  <label className="block text-sm font-medium">
+                                    Data prevista
+                                    <input
+                                      value={edicaoEntrada.data}
+                                      onChange={(ev) => setEdicaoEntrada((x) => ({...x, data: ev.target.value}))}
+                                      type="date"
+                                      className={field}
+                                    />
+                                  </label>
+                                  <label className="block text-sm font-medium">
+                                    Valor já recebido (R$)
+                                    <input
+                                      value={edicaoEntrada.recebidoValor}
+                                      onChange={(ev) => setEdicaoEntrada((x) => ({...x, recebidoValor: ev.target.value}))}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      className={field}
+                                    />
+                                    <span className="mt-1 block text-xs font-normal text-[#7A5260]">Esse valor entra imediatamente no dinheiro em caixa.</span>
+                                  </label>
+                                </div>
+
+                                <div className="flex gap-2">
                                   <button
                                     type="button"
-                                    onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
+                                    onClick={() => salvarEdicaoEntrada(e.id)}
                                     className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-sm font-medium text-white sm:flex-none"
                                   >
-                                    Receber
+                                    Salvar
                                   </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
-                                  className="min-h-10 flex-1 rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145] sm:flex-none"
-                                >
-                                  Excluir
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditandoEntrada(null)}
+                                    className="min-h-10 flex-1 rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145] sm:flex-none"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
                               </div>
-                            </div>
+                            ) : (
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <strong className="break-words">{e.descricao}</strong>
+                                    <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (recebido >= e.valor ? "bg-[#FFF1F7] text-[#C43A72]" : recebido > 0 ? "bg-[#FFF1F7] text-[#7A3148]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
+                                      {status}
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-xs text-[#7A5260]">{e.data ? "Previsto para " + formatDate(e.data) : "Sem data prevista"}</p>
+                                  {recebido > 0 && (
+                                    <p className="mt-2 text-xs text-[#6A3B4B]">
+                                      Recebido: <strong>{brl(recebido)}</strong> • Falta receber: <strong>{brl(restante)}</strong>
+                                    </p>
+                                  )}
+                                  {recebido > 0 && e.recebidoEm && (
+                                    <p className="mt-1 text-xs font-medium text-[#C43A72]">Último registro de recebimento em {formatDate(e.recebidoEm)}</p>
+                                  )}
+                                </div>
+
+                                <div className="flex flex-col gap-3 sm:items-end">
+                                  <div className="text-left sm:text-right">
+                                    <span className="block text-xs text-[#7A5260]">Valor total</span>
+                                    <strong className="text-xl font-bold text-[#4A1F2D]">{brl(e.valor)}</strong>
+                                  </div>
+                                  <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                                    {recebido < e.valor && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoValor: i.valor, recebidoEm: isoDate(new Date())} : i))}
+                                        className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-sm font-medium text-white sm:flex-none"
+                                      >
+                                        Receber tudo
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => iniciarEdicaoEntrada(e)}
+                                      className="min-h-10 flex-1 rounded-xl border border-[#F8B6D8] bg-[#FFF1F7] px-4 py-2 text-sm font-medium text-[#7A3148] sm:flex-none"
+                                    >
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
+                                      className="min-h-10 flex-1 rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145] sm:flex-none"
+                                    >
+                                      Excluir
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 )}
               </div>
