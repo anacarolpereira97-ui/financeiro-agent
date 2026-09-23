@@ -379,7 +379,7 @@ export default function Page() {
               <div className="space-y-5">
                 <form onSubmit={addEntrada} className={card + " space-y-3"}>
                   <div>
-                    <h3 className="font-semibold text-[#4A1F2D]">Nova entrada extra</h3>
+                    <h3 className="font-semibold text-[#4A1F2D]">Renda extra</h3>
                     <p className="mt-1 text-sm text-[#7A5260]">
                       Lance honorários ou outros valores. Eles só entram no caixa quando você clicar em Receber.
                     </p>
