@@ -19,6 +19,7 @@ export default function Page() {
   const [entradas, setEntradas] = useState<Entrada[]>([]);
   const [dividas, setDividas] = useState<Divida[]>([]);
   const [controleParcelas, setControleParcelas] = useState<Record<string, { pago?: boolean; excluido?: boolean }>>({});
+  const [controleCompromissos, setControleCompromissos] = useState<Record<string, { pago?: boolean; pagoEm?: string }>>({});
   const [carregado, setCarregado] = useState(false);
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function Page() {
       setEntradas(JSON.parse(localStorage.getItem("fin_entradas") || "[]"));
       setDividas(JSON.parse(localStorage.getItem("fin_dividas") || "[]"));
       setControleParcelas(JSON.parse(localStorage.getItem("fin_controle_parcelas") || "{}"));
+      setControleCompromissos(JSON.parse(localStorage.getItem("fin_controle_compromissos") || "{}"));
     } catch {}
     setCarregado(true);
   }, []);
@@ -37,7 +39,8 @@ export default function Page() {
     localStorage.setItem("fin_entradas", JSON.stringify(entradas));
     localStorage.setItem("fin_dividas", JSON.stringify(dividas));
     localStorage.setItem("fin_controle_parcelas", JSON.stringify(controleParcelas));
-  }, [gastos, entradas, dividas, controleParcelas, carregado]);
+    localStorage.setItem("fin_controle_compromissos", JSON.stringify(controleCompromissos));
+  }, [gastos, entradas, dividas, controleParcelas, controleCompromissos, carregado]);
 
   const totalEntradasLancadas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
   const totalEntradasRecebidas = useMemo(() => entradas.filter((e) => e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
@@ -92,7 +95,11 @@ export default function Page() {
   const parcelasPagas = parcelasAtivas.filter((p) => p.status === "paga");
   const totalParcelasFuturas = proximasParcelas.reduce((s, p) => s + p.valor, 0);
   const totalAtrasado = parcelasAtrasadas.reduce((s, p) => s + p.valor, 0);
-  const totalPagoFixo = parcelasPagas.reduce((s, p) => s + p.valor, 0);
+  const totalPagoParcelas = parcelasPagas.reduce((s, p) => s + p.valor, 0);
+  const totalCompromissosPagos =
+    (controleCompromissos.solar?.pago ? 370 : 0) +
+    (controleCompromissos.terapia?.pago ? 320 : 0);
+  const totalPagoFixo = totalPagoParcelas + totalCompromissosPagos;
   const saldoFixo = totalFixoRecebido - totalPagoFixo;
   const saldoExtra = totalEntradasRecebidas;
   const proximos90Dias = proximasParcelas.filter((p) => {
@@ -243,16 +250,66 @@ export default function Page() {
             </div>
 
             <div className={card}>
-              <h2 className="font-semibold">Compromissos cadastrados</h2>
-              <p className="mt-2 text-xs text-zinc-500">Estes valores são compromissos previstos e não são descontados automaticamente antes do pagamento. Lance o pagamento em Gastos quando ele ocorrer.</p>
-              <div className="mt-3 flex justify-between border-b border-zinc-100 pb-3"><span>Placas solares</span><strong>R$ 370,00</strong></div>
-              <div className="mt-3 flex justify-between"><span>Terapia (2 × R$ 160)</span><strong>R$ 320,00</strong></div>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Compromissos fixos</h2>
+                  <p className="mt-1 text-xs text-zinc-500">Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
+                </div>
+                <strong>{brl(690)}</strong>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {[
+                  { id: "solar", nome: "Placas solares", valor: 370, detalhe: "Compromisso mensal" },
+                  { id: "terapia", nome: "Terapia", valor: 320, detalhe: "2 sessões por mês" }
+                ].map((comp) => {
+                  const pago = Boolean(controleCompromissos[comp.id]?.pago);
+                  return (
+                    <div key={comp.id} className="rounded-2xl border border-zinc-200 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{comp.nome}</p>
+                            <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (pago ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                              {pago ? "Pago" : "Pendente"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-zinc-500">{comp.detalhe}</p>
+                          {pago && controleCompromissos[comp.id]?.pagoEm && (
+                            <p className="mt-1 text-xs text-emerald-700">Pago em {String(controleCompromissos[comp.id]?.pagoEm).split("-").reverse().join("/")}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <strong>{brl(comp.valor)}</strong>
+                          {!pago ? (
+                            <button
+                              type="button"
+                              onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
+                              className="rounded-xl bg-zinc-950 px-3 py-2 text-xs font-medium text-white"
+                            >
+                              Pagar
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: false}}))}
+                              className="rounded-xl border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700"
+                            >
+                              Desfazer
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
 
         {aba === "entradas" && (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
             <form onSubmit={addEntrada} className={card + " space-y-3"}>
               <h2 className="text-lg font-semibold">Lançar entrada de dinheiro</h2>
               <label className="block text-sm">Descrição<input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" /></label>
@@ -262,7 +319,7 @@ export default function Page() {
             </form>
 
             <div className={card}>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold">Entradas extras</h2>
                   <p className="mt-1 text-sm text-zinc-500">Lançar não altera o caixa. Clique em Receber quando o pagamento realmente entrar.</p>
@@ -274,7 +331,8 @@ export default function Page() {
               </div>
               {entradas.length === 0 && <p className="mt-3 text-sm text-zinc-500">Nenhuma entrada extra lançada.</p>}
               {entradas.map((e) => (
-                <div key={e.id} className="flex flex-col gap-3 border-b border-zinc-100 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div key={e.id} className="rounded-2xl border border-zinc-200 p-4">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <strong>{e.descricao}</strong>
@@ -285,25 +343,28 @@ export default function Page() {
                     {e.data && <p className="mt-1 text-xs text-zinc-500">Previsto para {e.data.split("-").reverse().join("/")}</p>}
                     {e.recebido && e.recebidoEm && <p className="mt-1 text-xs text-emerald-700">Recebido em {e.recebidoEm.split("-").reverse().join("/")}</p>}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <strong className={e.recebido ? "text-emerald-700" : "text-zinc-800"}>{brl(e.valor)}</strong>
-                    {!e.recebido && (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                    <strong className={"text-2xl font-bold " + (e.recebido ? "text-emerald-700" : "text-zinc-900")}>{brl(e.valor)}</strong>
+                    <div className="flex flex-nowrap gap-2">
+                      {!e.recebido && (
+                        <button
+                          type="button"
+                          onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
+                          className="rounded-xl bg-zinc-950 px-4 py-2 text-sm font-medium text-white"
+                        >
+                          Receber
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
-                        className="rounded-lg bg-zinc-950 px-3 py-2 text-xs font-medium text-white"
+                        onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
+                        className="rounded-xl border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700"
                       >
-                        Receber
+                        Excluir
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
-                      className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700"
-                    >
-                      Excluir
-                    </button>
+                    </div>
                   </div>
+                </div>
                 </div>
               ))}
             </div>
