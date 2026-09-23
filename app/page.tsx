@@ -2,11 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
-type Gasto = { id: string; descricao: string; valor: number };
+type Gasto = { id: string; descricao: string; valor: number; forma: "avista" | "parcelado"; parcelas: number; vencimento: string };
 type Entrada = { id: string; descricao: string; valor: number; data: string };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
 
 const RENDA_FIXA = 1000;
+const ENTRADA_PROGRAMADA = 2300;
 const PRIMEIRO_RECEBIMENTO = "2026-10-10";
 const FIXOS = 690;
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -39,7 +40,8 @@ export default function Page() {
   const hoje = new Date();
   const inicioRenda = new Date(PRIMEIRO_RECEBIMENTO + "T00:00:00");
   const rendaFixaRecebida = hoje >= inicioRenda ? RENDA_FIXA : 0;
-  const rendaTotal = rendaFixaRecebida + totalEntradas;
+  const entradaProgramadaRecebida = hoje >= inicioRenda ? ENTRADA_PROGRAMADA : 0;
+  const rendaTotal = rendaFixaRecebida + entradaProgramadaRecebida + totalEntradas;
   const saldo = rendaTotal - totalGastos;
 
   const plano = useMemo(() => {
@@ -57,8 +59,11 @@ export default function Page() {
     const f = new FormData(e.currentTarget);
     const descricao = String(f.get("descricao") || "").trim();
     const valor = Number(f.get("valor"));
+    const forma = String(f.get("forma") || "avista") as "avista" | "parcelado";
+    const parcelas = Math.max(1, Number(f.get("parcelas") || 1));
+    const vencimento = String(f.get("vencimento") || "");
     if (!descricao || !Number.isFinite(valor) || valor <= 0) return;
-    setGastos((x) => [...x, { id: crypto.randomUUID(), descricao, valor }]);
+    setGastos((x) => [...x, { id: crypto.randomUUID(), descricao, valor, forma, parcelas, vencimento }]);
     e.currentTarget.reset();
   }
 
@@ -93,7 +98,7 @@ export default function Page() {
       <div className="mx-auto max-w-4xl px-4 py-6">
         <p className="text-sm text-zinc-500">Ciclo do dia 10 ao dia 9</p>
         <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
-        <p className="mt-2 text-sm text-zinc-600">Saldo inicial: R$ 0,00 • Próxima renda fixa: R$ 1.000,00 em 10/10/2026</p>
+        <p className="mt-2 text-sm text-zinc-600">Saldo inicial: R$ 0,00 • Em 10/10/2026 entram R$ 1.000,00 de renda fixa + R$ 2.300,00 programados</p>
 
         <div className="my-5 flex gap-2 overflow-x-auto">
           {[
@@ -116,8 +121,9 @@ export default function Page() {
 
         {aba === "painel" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
               <Resumo titulo="Renda fixa recebida" valor={rendaFixaRecebida} />
+              <Resumo titulo="R$ 2.300 programados" valor={entradaProgramadaRecebida} />
               <Resumo titulo="Entradas extras" valor={totalEntradas} />
               <Resumo titulo="Fixos" valor={FIXOS} />
               <Resumo titulo="Gastos" valor={totalGastos} />
@@ -132,8 +138,9 @@ export default function Page() {
               <p className="mt-2 text-sm text-zinc-600">
                 {saldo < 0 ? "Você ultrapassou sua renda disponível em " + brl(Math.abs(saldo)) + "." : "Você ainda tem " + brl(saldo) + " disponível neste ciclo."}
               </p>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
+                <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Entrada programada</span><strong>{brl(entradaProgramadaRecebida)}</strong></div>
                 <div className="rounded-xl bg-emerald-50 p-3"><span className="block text-zinc-500">Entradas extras</span><strong className="text-emerald-700">{brl(totalEntradas)}</strong></div>
               </div>
             </div>
@@ -183,6 +190,14 @@ export default function Page() {
               <h2 className="text-lg font-semibold">Lançar gasto</h2>
               <label className="block text-sm">Descrição<input name="descricao" required className={field} placeholder="Ex.: mercado" /></label>
               <label className="block text-sm">Valor (R$)<input name="valor" required type="number" step="0.01" min="0.01" className={field} /></label>
+              <label className="block text-sm">Forma de pagamento
+                <select name="forma" defaultValue="avista" className={field}>
+                  <option value="avista">À vista</option>
+                  <option value="parcelado">Parcelado</option>
+                </select>
+              </label>
+              <label className="block text-sm">Quantidade de parcelas<input name="parcelas" type="number" min="1" defaultValue="1" className={field} /></label>
+              <label className="block text-sm">Data de vencimento do parcelamento<input name="vencimento" type="date" className={field} /></label>
               <button className="w-full rounded-xl bg-zinc-950 px-4 py-3 font-semibold text-white">Adicionar gasto</button>
             </form>
 
@@ -191,7 +206,13 @@ export default function Page() {
               {gastos.length === 0 && <p className="mt-3 text-sm text-zinc-500">Nenhum gasto lançado.</p>}
               {gastos.map((g) => (
                 <div key={g.id} className="flex items-center justify-between border-b border-zinc-100 py-3">
-                  <span>{g.descricao}</span>
+                  <div>
+                    <span className="font-medium">{g.descricao}</span>
+                    <p className="text-xs text-zinc-500">
+                      {g.forma === "parcelado" ? "Parcelado em " + g.parcelas + "x" : "À vista"}
+                      {g.vencimento ? " • vence em " + g.vencimento.split("-").reverse().join("/") : ""}
+                    </p>
+                  </div>
                   <div>
                     <strong>{brl(g.valor)}</strong>
                     <button type="button" onClick={() => setGastos((x) => x.filter((i) => i.id !== g.id))} className="ml-3 text-xs text-red-700">Excluir</button>
