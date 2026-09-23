@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 type Gasto = { id: string; descricao: string; valor: number; forma: "avista" | "parcelado"; parcelas: number; vencimento: string };
 type Entrada = { id: string; descricao: string; valor: number; data: string };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
+type ParcelaProjetada = { gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string };
 
 const RENDA_FIXA = 1000;
 const ENTRADA_PROGRAMADA = 2300;
@@ -43,6 +44,44 @@ export default function Page() {
   const entradaProgramadaRecebida = hoje >= inicioRenda ? ENTRADA_PROGRAMADA : 0;
   const rendaTotal = rendaFixaRecebida + entradaProgramadaRecebida + totalEntradas;
   const saldo = rendaTotal - totalGastos;
+
+  const parcelasProjetadas = useMemo<ParcelaProjetada[]>(() => {
+    const itens: ParcelaProjetada[] = [];
+    for (const g of gastos) {
+      const forma = g.forma || "avista";
+      const quantidade = Math.max(1, g.parcelas || 1);
+      if (forma !== "parcelado" || !g.vencimento || quantidade <= 1) continue;
+
+      const [ano, mes, dia] = g.vencimento.split("-").map(Number);
+      const valorParcela = g.valor / quantidade;
+
+      for (let i = 0; i < quantidade; i++) {
+        const data = new Date(ano, mes - 1 + i, dia);
+        const yyyy = data.getFullYear();
+        const mm = String(data.getMonth() + 1).padStart(2, "0");
+        const dd = String(data.getDate()).padStart(2, "0");
+
+        itens.push({
+          gastoId: g.id,
+          descricao: g.descricao,
+          numero: i + 1,
+          total: quantidade,
+          valor: valorParcela,
+          vencimento: yyyy + "-" + mm + "-" + dd,
+        });
+      }
+    }
+
+    return itens.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  }, [gastos]);
+
+  const proximasParcelas = parcelasProjetadas.filter((p) => new Date(p.vencimento + "T00:00:00") >= new Date(new Date().toDateString()));
+  const totalParcelasFuturas = proximasParcelas.reduce((s, p) => s + p.valor, 0);
+  const proximos90Dias = proximasParcelas.filter((p) => {
+    const diff = new Date(p.vencimento + "T00:00:00").getTime() - Date.now();
+    return diff <= 90 * 24 * 60 * 60 * 1000;
+  });
+  const total90Dias = proximos90Dias.reduce((s, p) => s + p.valor, 0);
 
   const plano = useMemo(() => {
     let caixa = Math.max(0, saldo);
@@ -96,9 +135,17 @@ export default function Page() {
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
       <div className="mx-auto max-w-4xl px-4 py-6">
-        <p className="text-sm text-zinc-500">Ciclo do dia 10 ao dia 9</p>
-        <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
-        <p className="mt-2 text-sm text-zinc-600">Saldo inicial: R$ 0,00 • Em 10/10/2026 entram R$ 1.000,00 de renda fixa + R$ 2.300,00 programados</p>
+        <div className="rounded-3xl bg-zinc-950 p-6 text-white shadow-sm">
+          <p className="text-sm text-zinc-300">Visão financeira • ciclo do dia 10 ao dia 9</p>
+          <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
+          <p className="mt-2 text-sm text-zinc-300">Saldo inicial: R$ 0,00. Em 10/10/2026 entram R$ 1.000,00 de renda fixa + R$ 2.300,00 programados.</p>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Saldo atual</span><strong className="text-xl">{brl(saldo)}</strong></div>
+            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Extras lançados</span><strong className="text-xl">{brl(totalEntradas)}</strong></div>
+            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Parcelas futuras</span><strong className="text-xl">{brl(totalParcelasFuturas)}</strong></div>
+            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Próx. 90 dias</span><strong className="text-xl">{brl(total90Dias)}</strong></div>
+          </div>
+        </div>
 
         <div className="my-5 flex gap-2 overflow-x-auto">
           {[
@@ -143,6 +190,35 @@ export default function Page() {
                 <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Entrada programada</span><strong>{brl(entradaProgramadaRecebida)}</strong></div>
                 <div className="rounded-xl bg-emerald-50 p-3"><span className="block text-zinc-500">Entradas extras</span><strong className="text-emerald-700">{brl(totalEntradas)}</strong></div>
               </div>
+            </div>
+
+            <div className={card}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Próximas parcelas a vencer</h2>
+                  <p className="mt-1 text-xs text-zinc-500">Projeção automática dos gastos parcelados cadastrados.</p>
+                </div>
+                <strong>{brl(totalParcelasFuturas)}</strong>
+              </div>
+
+              {proximasParcelas.length === 0 ? (
+                <p className="mt-4 text-sm text-zinc-500">Nenhuma parcela futura cadastrada.</p>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {proximasParcelas.slice(0, 6).map((p) => (
+                    <div key={p.gastoId + "-" + p.numero} className="flex items-center justify-between rounded-xl bg-zinc-50 p-3">
+                      <div>
+                        <p className="text-sm font-medium">{p.descricao}</p>
+                        <p className="text-xs text-zinc-500">Parcela {p.numero}/{p.total} • {p.vencimento.split("-").reverse().join("/")}</p>
+                      </div>
+                      <strong>{brl(p.valor)}</strong>
+                    </div>
+                  ))}
+                  {proximasParcelas.length > 6 && (
+                    <p className="pt-1 text-xs text-zinc-500">+ {proximasParcelas.length - 6} parcela(s) futura(s).</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className={card}>
@@ -197,7 +273,7 @@ export default function Page() {
                 </select>
               </label>
               <label className="block text-sm">Quantidade de parcelas<input name="parcelas" type="number" min="1" defaultValue="1" className={field} /></label>
-              <label className="block text-sm">Data de vencimento do parcelamento<input name="vencimento" type="date" className={field} /></label>
+              <label className="block text-sm">Vencimento da 1ª parcela<input name="vencimento" type="date" className={field} /><span className="mt-1 block text-xs text-zinc-500">As demais parcelas serão projetadas mês a mês automaticamente.</span></label>
               <button className="w-full rounded-xl bg-zinc-950 px-4 py-3 font-semibold text-white">Adicionar gasto</button>
             </form>
 
@@ -209,7 +285,7 @@ export default function Page() {
                   <div>
                     <span className="font-medium">{g.descricao}</span>
                     <p className="text-xs text-zinc-500">
-                      {g.forma === "parcelado" ? "Parcelado em " + g.parcelas + "x" : "À vista"}
+                      {(g.forma || "avista") === "parcelado" ? "Parcelado em " + (g.parcelas || 1) + "x" : "À vista"}
                       {g.vencimento ? " • vence em " + g.vencimento.split("-").reverse().join("/") : ""}
                     </p>
                   </div>
@@ -219,6 +295,26 @@ export default function Page() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className={card + " md:col-span-2"}>
+              <h2 className="text-lg font-semibold">Projeção das parcelas futuras</h2>
+              <p className="mt-1 text-sm text-zinc-500">Calendário mensal calculado a partir do vencimento da 1ª parcela.</p>
+              {proximasParcelas.length === 0 ? (
+                <p className="mt-3 text-sm text-zinc-500">Nenhuma parcela futura para projetar.</p>
+              ) : (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {proximasParcelas.map((p) => (
+                    <div key={p.gastoId + "-proj-" + p.numero} className="flex items-center justify-between rounded-xl border border-zinc-200 p-3">
+                      <div>
+                        <p className="text-sm font-medium">{p.descricao}</p>
+                        <p className="text-xs text-zinc-500">Parcela {p.numero}/{p.total} • vence {p.vencimento.split("-").reverse().join("/")}</p>
+                      </div>
+                      <strong>{brl(p.valor)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
