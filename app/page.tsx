@@ -8,10 +8,19 @@ type Divida = { id: string; nome: string; valor: number; minimo: number; priorid
 type ParcelaProjetada = { key: string; gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string; status: "pendente" | "atrasada" | "paga" | "excluida" };
 
 const RENDA_FIXA = 1000;
-const ENTRADA_PROGRAMADA = 2300;
 const PRIMEIRO_RECEBIMENTO = "2026-10-10";
-const FIXOS = 690;
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+function isoDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + d;
+}
+
+function formatDate(value: string) {
+  return value ? value.split("-").reverse().join("/") : "—";
+}
 
 export default function Page() {
   const [aba, setAba] = useState("painel");
@@ -42,14 +51,33 @@ export default function Page() {
     localStorage.setItem("fin_controle_compromissos", JSON.stringify(controleCompromissos));
   }, [gastos, entradas, dividas, controleParcelas, controleCompromissos, carregado]);
 
-  const totalEntradasLancadas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
   const totalEntradasRecebidas = useMemo(() => entradas.filter((e) => e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
   const totalAReceber = useMemo(() => entradas.filter((e) => !e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
   const hoje = new Date();
+  const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   const inicioRenda = new Date(PRIMEIRO_RECEBIMENTO + "T00:00:00");
-  const rendaFixaRecebida = hoje >= inicioRenda ? RENDA_FIXA : 0;
-  const entradaProgramadaRecebida = hoje >= inicioRenda ? ENTRADA_PROGRAMADA : 0;
-  const totalFixoRecebido = rendaFixaRecebida + entradaProgramadaRecebida;
+  const inicioCiclo = hoje.getDate() >= 10
+    ? new Date(hoje.getFullYear(), hoje.getMonth(), 10)
+    : new Date(hoje.getFullYear(), hoje.getMonth() - 1, 10);
+  const fimCiclo = new Date(inicioCiclo.getFullYear(), inicioCiclo.getMonth() + 1, 9);
+  const cicloKey = inicioCiclo.getFullYear() + "-" + String(inicioCiclo.getMonth() + 1).padStart(2, "0");
+  const rendaFixaRecebida = inicioCiclo >= inicioRenda && hojeInicio >= inicioCiclo ? RENDA_FIXA : 0;
+  const totalFixoRecebido = rendaFixaRecebida;
+
+  const proximosRecebimentosFixos = Array.from({ length: 6 }, (_, index) => {
+    const base = hojeInicio < inicioRenda ? inicioRenda : new Date(
+      hoje.getFullYear(),
+      hoje.getMonth() + (hoje.getDate() >= 10 ? 1 : 0),
+      10
+    );
+    const data = new Date(base.getFullYear(), base.getMonth() + index, 10);
+    return { data: isoDate(data), valor: RENDA_FIXA };
+  });
+
+  const compromissosKeys = {
+    solar: "solar_" + cicloKey,
+    terapia: "terapia_" + cicloKey,
+  };
 
   const parcelasProjetadas = useMemo<ParcelaProjetada[]>(() => {
     const itens: ParcelaProjetada[] = [];
@@ -97,11 +125,11 @@ export default function Page() {
   const totalAtrasado = parcelasAtrasadas.reduce((s, p) => s + p.valor, 0);
   const totalPagoParcelas = parcelasPagas.reduce((s, p) => s + p.valor, 0);
   const totalCompromissosPagos =
-    (controleCompromissos.solar?.pago ? 370 : 0) +
-    (controleCompromissos.terapia?.pago ? 320 : 0);
+    (controleCompromissos[compromissosKeys.solar]?.pago ? 370 : 0) +
+    (controleCompromissos[compromissosKeys.terapia]?.pago ? 320 : 0);
   const totalCompromissosPendentes =
-    (controleCompromissos.solar?.pago ? 0 : 370) +
-    (controleCompromissos.terapia?.pago ? 0 : 320);
+    (controleCompromissos[compromissosKeys.solar]?.pago ? 0 : 370) +
+    (controleCompromissos[compromissosKeys.terapia]?.pago ? 0 : 320);
   const totalPagoFixo = totalPagoParcelas + totalCompromissosPagos;
   const saldoFixo = totalFixoRecebido - totalPagoFixo;
   const saldoExtra = totalEntradasRecebidas;
@@ -166,7 +194,7 @@ export default function Page() {
         <div className="rounded-[32px] bg-gradient-to-br from-[#F04AA8] via-[#E64B78] to-[#D93A4A] p-6 text-white shadow-lg shadow-[#F8B6D8]/60">
           <p className="text-sm text-[#FFEAF4]">Visão financeira • ciclo do dia 10 ao dia 9</p>
           <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
-          <p className="mt-2 text-sm text-[#FFEAF4]">Saldo inicial: R$ 0,00. Em 10/10/2026 entram R$ 1.000,00 de renda fixa + R$ 2.300,00 programados.</p>
+          <p className="mt-2 text-sm text-[#FFEAF4]">Saldo inicial: R$ 0,00. A renda fixa de R$ 1.000,00 entra automaticamente no caixa todo dia 10, a partir de 10/10/2026.</p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Saldo atual</span><strong className="text-xl">{brl(saldoFixo)}</strong></div>
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Extra recebido</span><strong className="text-xl">{brl(totalEntradasRecebidas)}</strong><span className="mt-1 block text-xs text-[#FFEAF4]/80">A receber: {brl(totalAReceber)}</span></div>
@@ -178,6 +206,7 @@ export default function Page() {
         <div className="my-5 flex gap-2 overflow-x-auto">
           {[
             ["painel","Painel"],
+            ["programadas","Entrada programada"],
             ["entradas","Entradas"],
             ["gastos","Gastos"],
             ["dividas","Dívidas atrasadas"],
@@ -198,7 +227,6 @@ export default function Page() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Resumo titulo="Renda fixa recebida" valor={rendaFixaRecebida} />
-              <Resumo titulo="R$ 2.300 programados" valor={entradaProgramadaRecebida} />
               <Resumo titulo="Dinheiro extra recebido" valor={saldoExtra} />
               <Resumo titulo="Entradas extras a receber" valor={totalAReceber} />
               <Resumo titulo="Pago com dinheiro fixo" valor={totalPagoFixo} />
@@ -214,9 +242,8 @@ export default function Page() {
               <p className="mt-2 text-sm text-[#6A3B4B]">
                 O dinheiro extra disponível é {brl(saldoExtra)}. Entradas apenas lançadas ficam em “A receber” e só entram no caixa quando você clicar em Receber.
               </p>
-              <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
-                <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Entrada programada</span><strong>{brl(entradaProgramadaRecebida)}</strong></div>
                 <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Extra recebido</span><strong className="text-[#C43A72]">{brl(totalEntradasRecebidas)}</strong></div>
               </div>
             </div>
@@ -234,20 +261,20 @@ export default function Page() {
                 <p className="mt-4 text-sm text-[#7A5260]">Nenhum pagamento pendente no momento.</p>
               ) : (
                 <div className="mt-3 space-y-2">
-                  {!controleCompromissos.solar?.pago && (
+                  {!controleCompromissos[compromissosKeys.solar]?.pago && (
                     <div className="flex flex-col gap-3 rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7] p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold">Placas solares</p>
                           <span className="rounded-full bg-[#FDEBEC] px-2.5 py-1 text-xs font-medium text-[#B82F3E]">Fixo mensal</span>
                         </div>
-                        <p className="mt-1 text-xs text-[#7A5260]">Compromisso fixo • pendente</p>
+                        <p className="mt-1 text-xs text-[#7A5260]">Vencimento todo dia 10 • pendente</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <strong>{brl(370)}</strong>
                         <button
                           type="button"
-                          onClick={() => setControleCompromissos((x) => ({...x, solar: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
+                          onClick={() => setControleCompromissos((x) => ({...x, [compromissosKeys.solar]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
                           className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
                         >
                           Pagar
@@ -256,20 +283,20 @@ export default function Page() {
                     </div>
                   )}
 
-                  {!controleCompromissos.terapia?.pago && (
+                  {!controleCompromissos[compromissosKeys.terapia]?.pago && (
                     <div className="flex flex-col gap-3 rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7] p-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm font-semibold">Terapia</p>
                           <span className="rounded-full bg-[#FFF1F7] px-2.5 py-1 text-xs font-medium text-[#C43A72]">Fixo mensal</span>
                         </div>
-                        <p className="mt-1 text-xs text-[#7A5260]">2 sessões por mês • pendente</p>
+                        <p className="mt-1 text-xs text-[#7A5260]">Vencimento todo dia 10 • 2 sessões por mês • pendente</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <strong>{brl(320)}</strong>
                         <button
                           type="button"
-                          onClick={() => setControleCompromissos((x) => ({...x, terapia: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
+                          onClick={() => setControleCompromissos((x) => ({...x, [compromissosKeys.terapia]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
                           className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
                         >
                           Pagar
@@ -300,15 +327,15 @@ export default function Page() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold text-[#4A1F2D]">Compromissos fixos</h2>
-                  <p className="mt-1 text-xs text-[#7A5260]">Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
+                  <p className="mt-1 text-xs text-[#7A5260]">Vencimento do ciclo: dia 10. Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
                 </div>
                 <strong>{brl(690)}</strong>
               </div>
 
               <div className="mt-4 space-y-3">
                 {[
-                  { id: "solar", nome: "Placas solares", valor: 370, detalhe: "Compromisso mensal" },
-                  { id: "terapia", nome: "Terapia", valor: 320, detalhe: "2 sessões por mês" }
+                  { id: compromissosKeys.solar, nome: "Placas solares", valor: 370, detalhe: "Vencimento todo dia 10" },
+                  { id: compromissosKeys.terapia, nome: "Terapia", valor: 320, detalhe: "Vencimento todo dia 10 • 2 sessões por mês" }
                 ].map((comp) => {
                   const pago = Boolean(controleCompromissos[comp.id]?.pago);
                   return (
@@ -350,6 +377,73 @@ export default function Page() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {aba === "programadas" && (
+          <div className="space-y-5">
+            <div className={card}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-[#4A1F2D]">Projeção de entradas</h2>
+                  <p className="mt-1 text-sm text-[#7A5260]">
+                    Aqui é somente projeção. Apenas a renda fixa entra automaticamente no caixa no dia 10. Honorários entram somente quando você marcar como recebido.
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-[#FFF1F7] px-4 py-3 text-sm">
+                  <span className="block text-[#7A5260]">Próximo fixo</span>
+                  <strong className="text-[#C43A72]">{brl(RENDA_FIXA)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <div className={card}>
+                <h3 className="font-semibold text-[#4A1F2D]">Renda fixa projetada</h3>
+                <p className="mt-1 text-sm text-[#7A5260]">R$ 1.000,00 todo dia 10.</p>
+                <div className="mt-4 space-y-3">
+                  {proximosRecebimentosFixos.map((item) => (
+                    <div key={item.data} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4">
+                      <div>
+                        <p className="font-medium">Renda fixa mensal</p>
+                        <p className="mt-1 text-xs text-[#7A5260]">Prevista para {formatDate(item.data)}</p>
+                      </div>
+                      <strong>{brl(item.valor)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className={card}>
+                <h3 className="font-semibold text-[#4A1F2D]">Honorários lançados</h3>
+                <p className="mt-1 text-sm text-[#7A5260]">Apenas projeção até você clicar em Receber na aba Entradas.</p>
+                {entradas.length === 0 ? (
+                  <p className="mt-4 text-sm text-[#7A5260]">Nenhum honorário lançado.</p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {entradas
+                      .slice()
+                      .sort((a, b) => (a.data || "9999-12-31").localeCompare(b.data || "9999-12-31"))
+                      .map((entrada) => (
+                        <div key={entrada.id} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-white p-4">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-medium">{entrada.descricao}</p>
+                              <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (entrada.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
+                                {entrada.recebido ? "Recebido" : "Projetado"}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-[#7A5260]">
+                              {entrada.data ? "Previsto para " + formatDate(entrada.data) : "Sem data prevista"}
+                            </p>
+                          </div>
+                          <strong>{brl(entrada.valor)}</strong>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
