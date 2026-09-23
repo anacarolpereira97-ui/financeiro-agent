@@ -170,6 +170,24 @@ export default function Page() {
     terapia: "terapia_" + cicloKey,
   };
 
+  const compromissosFixosMensais = [
+    { id: "solar", nome: "Placas solares", valor: 370 },
+    { id: "terapia", nome: "Terapia", valor: 320 },
+  ];
+
+  const compromissosFixosProjetados = Array.from({ length: 12 }, (_, index) => {
+    const base = hoje.getDate() <= 10
+      ? new Date(hoje.getFullYear(), hoje.getMonth(), 10)
+      : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 10);
+    const vencimento = new Date(base.getFullYear(), base.getMonth() + index, 10);
+
+    return compromissosFixosMensais.map((comp) => ({
+      ...comp,
+      vencimento: isoDate(vencimento),
+      cicloKey: vencimento.getFullYear() + "-" + String(vencimento.getMonth() + 1).padStart(2, "0"),
+    }));
+  }).flat();
+
   const parcelasProjetadas = useMemo<ParcelaProjetada[]>(() => {
     const itens: ParcelaProjetada[] = [];
     for (const g of gastos) {
@@ -226,10 +244,22 @@ export default function Page() {
   const saldoExtra = totalEntradasRecebidas;
   const dinheiroCaixa = saldoFixo + saldoExtra;
   const proximos90Dias = proximasParcelas.filter((p) => {
-    const diff = new Date(p.vencimento + "T00:00:00").getTime() - Date.now();
-    return diff <= 90 * 24 * 60 * 60 * 1000;
+    const diff = new Date(p.vencimento + "T00:00:00").getTime() - hojeInicio.getTime();
+    return diff >= 0 && diff <= 90 * 24 * 60 * 60 * 1000;
   });
-  const total90Dias = proximos90Dias.reduce((s, p) => s + p.valor, 0);
+
+  const compromissosFixos90Dias = compromissosFixosProjetados.filter((comp) => {
+    const data = new Date(comp.vencimento + "T00:00:00");
+    const diff = data.getTime() - hojeInicio.getTime();
+    if (diff < 0 || diff > 90 * 24 * 60 * 60 * 1000) return false;
+
+    const chave = comp.id + "_" + comp.cicloKey;
+    return !controleCompromissos[chave]?.pago;
+  });
+
+  const total90Dias =
+    proximos90Dias.reduce((s, p) => s + p.valor, 0) +
+    compromissosFixos90Dias.reduce((s, comp) => s + comp.valor, 0);
 
   const plano = useMemo(() => {
     let caixa = Math.max(0, saldoFixo);
@@ -662,15 +692,15 @@ export default function Page() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <div>
                   <h2 className="font-semibold text-[#4A1F2D]">Compromissos fixos</h2>
-                  <p className="mt-1 text-xs text-[#7A5260]">Vencimento do ciclo: dia 10. Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
+                  <p className="mt-1 text-xs text-[#7A5260]">Vencimento todo dia 10. Estes gastos se repetem automaticamente todos os meses e só reduzem o dinheiro em caixa quando você clicar em Pagar.</p>
                 </div>
                 <strong className="break-words"> {brl(690)} </strong>
               </div>
 
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 {[
-                  { id: compromissosKeys.solar, nome: "Placas solares", valor: 370, detalhe: "Vencimento todo dia 10" },
-                  { id: compromissosKeys.terapia, nome: "Terapia", valor: 320, detalhe: "Vencimento todo dia 10 • 2 sessões por mês" }
+                  { id: compromissosKeys.solar, nome: "Placas solares", valor: 370, detalhe: "Vencimento todo dia 10 • recorrente mensal" },
+                  { id: compromissosKeys.terapia, nome: "Terapia", valor: 320, detalhe: "Vencimento todo dia 10 • 2 sessões por mês • recorrente mensal" }
                 ].map((comp) => {
                   const pago = Boolean(controleCompromissos[comp.id]?.pago);
                   return (
