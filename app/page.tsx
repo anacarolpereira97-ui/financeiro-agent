@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Gasto = { id: string; descricao: string; valor: number };
+type Entrada = { id: string; descricao: string; valor: number; data: string };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
 
 const RENDA = 1000;
@@ -12,12 +13,14 @@ const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", c
 export default function Page() {
   const [aba, setAba] = useState("painel");
   const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [entradas, setEntradas] = useState<Entrada[]>([]);
   const [dividas, setDividas] = useState<Divida[]>([]);
   const [carregado, setCarregado] = useState(false);
 
   useEffect(() => {
     try {
       setGastos(JSON.parse(localStorage.getItem("fin_gastos") || "[]"));
+      setEntradas(JSON.parse(localStorage.getItem("fin_entradas") || "[]"));
       setDividas(JSON.parse(localStorage.getItem("fin_dividas") || "[]"));
     } catch {}
     setCarregado(true);
@@ -26,11 +29,14 @@ export default function Page() {
   useEffect(() => {
     if (!carregado) return;
     localStorage.setItem("fin_gastos", JSON.stringify(gastos));
+    localStorage.setItem("fin_entradas", JSON.stringify(entradas));
     localStorage.setItem("fin_dividas", JSON.stringify(dividas));
-  }, [gastos, dividas, carregado]);
+  }, [gastos, entradas, dividas, carregado]);
 
   const totalGastos = useMemo(() => gastos.reduce((s, g) => s + g.valor, 0), [gastos]);
-  const saldo = RENDA - FIXOS - totalGastos;
+  const totalEntradas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
+  const rendaTotal = RENDA + totalEntradas;
+  const saldo = rendaTotal - FIXOS - totalGastos;
 
   const plano = useMemo(() => {
     let caixa = Math.max(0, saldo);
@@ -49,6 +55,17 @@ export default function Page() {
     const valor = Number(f.get("valor"));
     if (!descricao || !Number.isFinite(valor) || valor <= 0) return;
     setGastos((x) => [...x, { id: crypto.randomUUID(), descricao, valor }]);
+    e.currentTarget.reset();
+  }
+
+  function addEntrada(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const descricao = String(f.get("descricao") || "").trim();
+    const valor = Number(f.get("valor"));
+    const data = String(f.get("data") || "");
+    if (!descricao || !Number.isFinite(valor) || valor <= 0) return;
+    setEntradas((x) => [...x, { id: crypto.randomUUID(), descricao, valor, data }]);
     e.currentTarget.reset();
   }
 
@@ -77,6 +94,7 @@ export default function Page() {
         <div className="my-5 flex gap-2 overflow-x-auto">
           {[
             ["painel","Painel"],
+            ["entradas","Entradas"],
             ["gastos","Gastos"],
             ["dividas","Dívidas atrasadas"],
             ["plano","Plano de pagamento"]
@@ -94,8 +112,9 @@ export default function Page() {
 
         {aba === "painel" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Resumo titulo="Renda" valor={RENDA} />
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+              <Resumo titulo="Renda total" valor={rendaTotal} />
+              <Resumo titulo="Entradas extras" valor={totalEntradas} />
               <Resumo titulo="Fixos" valor={FIXOS} />
               <Resumo titulo="Gastos" valor={totalGastos} />
               <Resumo titulo="Saldo" valor={saldo} escuro />
@@ -115,6 +134,36 @@ export default function Page() {
               <h2 className="font-semibold">Compromissos cadastrados</h2>
               <div className="mt-3 flex justify-between border-b border-zinc-100 pb-3"><span>Placas solares</span><strong>R$ 370,00</strong></div>
               <div className="mt-3 flex justify-between"><span>Terapia (2 × R$ 160)</span><strong>R$ 320,00</strong></div>
+            </div>
+          </div>
+        )}
+
+        {aba === "entradas" && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <form onSubmit={addEntrada} className={card + " space-y-3"}>
+              <h2 className="text-lg font-semibold">Lançar entrada de dinheiro</h2>
+              <label className="block text-sm">Descrição<input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" /></label>
+              <label className="block text-sm">Valor (R$)<input name="valor" required type="number" step="0.01" min="0.01" className={field} /></label>
+              <label className="block text-sm">Data<input name="data" type="date" className={field} /></label>
+              <button className="w-full rounded-xl bg-zinc-950 px-4 py-3 font-semibold text-white">Adicionar entrada</button>
+            </form>
+
+            <div className={card}>
+              <h2 className="text-lg font-semibold">Entradas extras deste ciclo</h2>
+              <p className="mt-1 text-sm text-zinc-500">Salário fixo mensal: {brl(RENDA)}</p>
+              {entradas.length === 0 && <p className="mt-3 text-sm text-zinc-500">Nenhuma entrada extra lançada.</p>}
+              {entradas.map((e) => (
+                <div key={e.id} className="flex items-center justify-between border-b border-zinc-100 py-3">
+                  <div>
+                    <strong>{e.descricao}</strong>
+                    {e.data && <p className="text-xs text-zinc-500">{e.data.split("-").reverse().join("/")}</p>}
+                  </div>
+                  <div>
+                    <strong className="text-emerald-700">+ {brl(e.valor)}</strong>
+                    <button type="button" onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))} className="ml-3 text-xs text-red-700">Excluir</button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
