@@ -133,6 +133,7 @@ export default function Page() {
   const totalPagoFixo = totalPagoParcelas + totalCompromissosPagos;
   const saldoFixo = totalFixoRecebido - totalPagoFixo;
   const saldoExtra = totalEntradasRecebidas;
+  const dinheiroCaixa = saldoFixo + saldoExtra;
   const proximos90Dias = proximasParcelas.filter((p) => {
     const diff = new Date(p.vencimento + "T00:00:00").getTime() - Date.now();
     return diff <= 90 * 24 * 60 * 60 * 1000;
@@ -196,7 +197,7 @@ export default function Page() {
           <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
           <p className="mt-2 text-sm text-[#FFEAF4]">Saldo inicial: R$ 0,00. A renda fixa de R$ 1.000,00 entra automaticamente no caixa todo dia 10, a partir de 10/10/2026.</p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Saldo atual</span><strong className="text-xl">{brl(saldoFixo)}</strong></div>
+            <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Dinheiro em caixa</span><strong className="text-xl">{brl(dinheiroCaixa)}</strong></div>
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Extra recebido</span><strong className="text-xl">{brl(totalEntradasRecebidas)}</strong><span className="mt-1 block text-xs text-[#FFEAF4]/80">A receber: {brl(totalAReceber)}</span></div>
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Parcelas futuras</span><strong className="text-xl">{brl(totalParcelasFuturas)}</strong></div>
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Próx. 90 dias</span><strong className="text-xl">{brl(total90Dias)}</strong></div>
@@ -231,20 +232,21 @@ export default function Page() {
               <Resumo titulo="Entradas extras a receber" valor={totalAReceber} />
               <Resumo titulo="Pago com dinheiro fixo" valor={totalPagoFixo} />
               <Resumo titulo="Parcelas em atraso" valor={totalAtrasado} />
-              <Resumo titulo="Saldo do dinheiro fixo" valor={saldoFixo} escuro />
+              <Resumo titulo="Dinheiro em caixa" valor={dinheiroCaixa} escuro />
             </div>
 
             <div className={card}>
               <p className="text-sm text-[#7A5260]">Situação atual</p>
-              <h2 className={"mt-1 text-2xl font-bold " + (saldoFixo < 0 ? "text-[#B82F3E]" : saldoFixo < 100 ? "text-[#B82F3E]" : "text-[#C43A72]")}>
-                {saldoFixo < 0 ? "Fixos no vermelho" : saldoFixo < 100 ? "Atenção no fixo" : "Fixos sob controle"}
+              <h2 className={"mt-1 text-2xl font-bold " + (dinheiroCaixa < 0 ? "text-[#B82F3E]" : dinheiroCaixa < 100 ? "text-[#B82F3E]" : "text-[#C43A72]")}>
+                {dinheiroCaixa < 0 ? "Caixa no vermelho" : dinheiroCaixa < 100 ? "Atenção no caixa" : "Caixa disponível"}
               </h2>
               <p className="mt-2 text-sm text-[#6A3B4B]">
-                O dinheiro extra disponível é {brl(saldoExtra)}. Entradas apenas lançadas ficam em “A receber” e só entram no caixa quando você clicar em Receber.
+                O dinheiro em caixa é {brl(dinheiroCaixa)} e soma tudo que realmente entrou: renda fixa recebida + entradas extras recebidas, descontando os pagamentos já marcados como pagos.
               </p>
-              <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
                 <div className="rounded-xl bg-[#FFF1F7] p-3"><span className="block text-[#7A5260]">Extra recebido</span><strong className="text-[#C43A72]">{brl(totalEntradasRecebidas)}</strong></div>
+                <div className="rounded-xl bg-[#FDEBEC] p-3"><span className="block text-[#7A5260]">Total em caixa</span><strong className="text-[#D93A4A]">{brl(dinheiroCaixa)}</strong></div>
               </div>
             </div>
 
