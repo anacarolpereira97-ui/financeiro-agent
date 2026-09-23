@@ -6,7 +6,8 @@ type Gasto = { id: string; descricao: string; valor: number };
 type Entrada = { id: string; descricao: string; valor: number; data: string };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
 
-const RENDA = 1000;
+const RENDA_FIXA = 1000;
+const PRIMEIRO_RECEBIMENTO = "2026-10-10";
 const FIXOS = 690;
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
@@ -35,8 +36,11 @@ export default function Page() {
 
   const totalGastos = useMemo(() => gastos.reduce((s, g) => s + g.valor, 0), [gastos]);
   const totalEntradas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
-  const rendaTotal = RENDA + totalEntradas;
-  const saldo = rendaTotal - FIXOS - totalGastos;
+  const hoje = new Date();
+  const inicioRenda = new Date(PRIMEIRO_RECEBIMENTO + "T00:00:00");
+  const rendaFixaRecebida = hoje >= inicioRenda ? RENDA_FIXA : 0;
+  const rendaTotal = rendaFixaRecebida + totalEntradas;
+  const saldo = rendaTotal - totalGastos;
 
   const plano = useMemo(() => {
     let caixa = Math.max(0, saldo);
@@ -89,7 +93,7 @@ export default function Page() {
       <div className="mx-auto max-w-4xl px-4 py-6">
         <p className="text-sm text-zinc-500">Ciclo do dia 10 ao dia 9</p>
         <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
-        <p className="mt-2 text-sm text-zinc-600">Renda: R$ 1.000,00 • Placas solares: R$ 370,00 • Terapia: R$ 320,00/mês</p>
+        <p className="mt-2 text-sm text-zinc-600">Saldo inicial: R$ 0,00 • Próxima renda fixa: R$ 1.000,00 em 10/10/2026</p>
 
         <div className="my-5 flex gap-2 overflow-x-auto">
           {[
@@ -113,7 +117,7 @@ export default function Page() {
         {aba === "painel" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <Resumo titulo="Renda fixa mensal" valor={RENDA} />
+              <Resumo titulo="Renda fixa recebida" valor={rendaFixaRecebida} />
               <Resumo titulo="Entradas extras" valor={totalEntradas} />
               <Resumo titulo="Fixos" valor={FIXOS} />
               <Resumo titulo="Gastos" valor={totalGastos} />
@@ -129,13 +133,14 @@ export default function Page() {
                 {saldo < 0 ? "Você ultrapassou sua renda disponível em " + brl(Math.abs(saldo)) + "." : "Você ainda tem " + brl(saldo) + " disponível neste ciclo."}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Renda fixa</span><strong>{brl(RENDA)}</strong></div>
+                <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
                 <div className="rounded-xl bg-emerald-50 p-3"><span className="block text-zinc-500">Entradas extras</span><strong className="text-emerald-700">{brl(totalEntradas)}</strong></div>
               </div>
             </div>
 
             <div className={card}>
               <h2 className="font-semibold">Compromissos cadastrados</h2>
+              <p className="mt-2 text-xs text-zinc-500">Estes valores são compromissos previstos e não são descontados automaticamente antes do pagamento. Lance o pagamento em Gastos quando ele ocorrer.</p>
               <div className="mt-3 flex justify-between border-b border-zinc-100 pb-3"><span>Placas solares</span><strong>R$ 370,00</strong></div>
               <div className="mt-3 flex justify-between"><span>Terapia (2 × R$ 160)</span><strong>R$ 320,00</strong></div>
             </div>
@@ -154,7 +159,7 @@ export default function Page() {
 
             <div className={card}>
               <h2 className="text-lg font-semibold">Entradas extras deste ciclo</h2>
-              <p className="mt-1 text-sm text-zinc-500">Aqui aparecem somente valores avulsos. A renda fixa mensal de {brl(RENDA)} fica separada no painel.</p>
+              <p className="mt-1 text-sm text-zinc-500">Aqui aparecem somente valores avulsos. Sua renda fixa de {brl(RENDA_FIXA)} só entra no saldo a partir de 10/10/2026.</p>
               {entradas.length === 0 && <p className="mt-3 text-sm text-zinc-500">Nenhuma entrada extra lançada.</p>}
               {entradas.map((e) => (
                 <div key={e.id} className="flex items-center justify-between border-b border-zinc-100 py-3">
