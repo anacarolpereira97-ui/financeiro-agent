@@ -413,157 +413,121 @@ export default function Page() {
         )}
 
         {aba === "entradas" && (
-          <div className="space-y-5">
-            <div className={card}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-[#4A1F2D]">Entradas</h2>
-                  <p className="mt-1 text-sm text-[#7A5260]">
-                    À esquerda fica a renda fixa projetada. À direita ficam os honorários e demais entradas extras.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-[#FFF1F7] px-3 py-2 font-medium text-[#C43A72]">
-                    Extra recebido: {brl(totalEntradasRecebidas)}
-                  </span>
-                  <span className="rounded-full bg-[#FDEBEC] px-3 py-2 font-medium text-[#B82F3E]">
-                    A receber: {brl(totalAReceber)}
-                  </span>
-                </div>
+          <div className="space-y-4 sm:space-y-5">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-[#F8B6D8]/70 bg-white p-4 shadow-sm shadow-[#F8B6D8]/30">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#7A5260]">Renda fixa</p>
+                <p className="mt-2 text-2xl font-bold text-[#4A1F2D]">{brl(RENDA_FIXA)}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[#7A5260]">Entrada automática no 5º dia útil de cada mês.</p>
+              </div>
+
+              <div className="rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7] p-4 shadow-sm shadow-[#F8B6D8]/30">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#7A5260]">Renda extra recebida</p>
+                <p className="mt-2 text-2xl font-bold text-[#C43A72]">{brl(totalEntradasRecebidas)}</p>
+                <p className="mt-1 text-xs text-[#7A5260]">Valores que você já marcou como recebidos.</p>
+              </div>
+
+              <div className="rounded-2xl border border-[#F06A75]/30 bg-[#FDEBEC] p-4 shadow-sm shadow-[#F8B6D8]/30">
+                <p className="text-xs font-medium uppercase tracking-wide text-[#7A5260]">Renda extra a receber</p>
+                <p className="mt-2 text-2xl font-bold text-[#B82F3E]">{brl(totalAReceber)}</p>
+                <p className="mt-1 text-xs text-[#7A5260]">Lançamentos que ainda não entraram no caixa.</p>
               </div>
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2 xl:gap-5">
-              <div className="space-y-5">
-                <div className={card}>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                    <div>
-                      <h3 className="font-semibold text-[#4A1F2D]">Renda fixa projetada</h3>
-                      <p className="mt-1 text-sm text-[#7A5260]">
-                        R$ 1.000,00 no 5º dia útil de cada mês. O sistema pula sábados, domingos e feriados e adiciona automaticamente ao caixa quando a data chegar.
-                      </p>
-                    </div>
-                    <strong className="text-[#C43A72]">{brl(RENDA_FIXA)} </strong>
-                  </div>
+            <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr] xl:gap-5">
+              <form onSubmit={addEntrada} className={card + " space-y-4"}>
+                <div>
+                  <h2 className="text-lg font-semibold text-[#4A1F2D]">Renda extra</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-[#7A5260]">
+                    Lance honorários ou outros valores. O lançamento fica como previsão e só entra no caixa quando você clicar em Receber.
+                  </p>
+                </div>
 
-                  <div className="mt-4 space-y-3">
-                    {proximosRecebimentosFixos.map((item) => (
-                      <div key={item.data} className="flex flex-col gap-2 rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="font-medium">Renda fixa mensal</p>
-                          <p className="mt-1 text-xs text-[#7A5260]">5º dia útil calculado: {formatDate(item.data)}</p>
-                        </div>
-                        <strong className="break-words"> {brl(item.valor)} </strong>
-                      </div>
-                    ))}
+                <label className="block text-sm font-medium">
+                  Descrição
+                  <input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" />
+                </label>
+
+                <label className="block text-sm font-medium">
+                  Valor (R$)
+                  <input name="valor" required type="number" step="0.01" min="0.01" className={field} />
+                </label>
+
+                <label className="block text-sm font-medium">
+                  Data prevista do pagamento
+                  <input name="data" type="date" className={field} />
+                  <span className="mt-1 block text-xs font-normal text-[#7A5260]">A data é apenas uma previsão.</span>
+                </label>
+
+                <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">
+                  Adicionar renda extra
+                </button>
+              </form>
+
+              <div className={card}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#4A1F2D]">Rendas extras lançadas</h2>
+                    <p className="mt-1 text-sm text-[#7A5260]">Acompanhe o que está previsto e o que já entrou no caixa.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full bg-[#FDEBEC] px-3 py-1.5 font-medium text-[#B82F3E]">A receber: {brl(totalAReceber)}</span>
+                    <span className="rounded-full bg-[#FFF1F7] px-3 py-1.5 font-medium text-[#C43A72]">Recebido: {brl(totalEntradasRecebidas)}</span>
                   </div>
                 </div>
-              </div>
 
-              <div className="space-y-5">
-                <form onSubmit={addEntrada} className={card + " space-y-3"}>
-                  <div>
-                    <h3 className="font-semibold text-[#4A1F2D]">Renda extra</h3>
-                    <p className="mt-1 text-sm text-[#7A5260]">
-                      Lance honorários ou outros valores. Eles só entram no caixa quando você clicar em Receber.
-                    </p>
+                {entradas.length === 0 ? (
+                  <div className="mt-5 rounded-2xl border border-dashed border-[#F8B6D8] bg-[#FFF1F7]/60 p-5 text-center">
+                    <p className="text-sm font-medium text-[#4A1F2D]">Nenhuma renda extra lançada.</p>
+                    <p className="mt-1 text-xs text-[#7A5260]">Use o formulário ao lado para adicionar honorários ou outros recebimentos.</p>
                   </div>
-
-                  <label className="block text-sm">
-                    Descrição
-                    <input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" />
-                  </label>
-
-                  <label className="block text-sm">
-                    Valor (R$)
-                    <input name="valor" required type="number" step="0.01" min="0.01" className={field} />
-                  </label>
-
-                  <label className="block text-sm">
-                    Data prevista do pagamento
-                    <input name="data" type="date" className={field} />
-                    <span className="mt-1 block text-xs text-[#7A5260]">
-                      Esta data é apenas uma previsão.
-                    </span>
-                  </label>
-
-                  <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">
-                    Adicionar entrada
-                  </button>
-                </form>
-
-                <div className={card}>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <h3 className="font-semibold text-[#4A1F2D]">Rendas extras lançadas</h3>
-                      <p className="mt-1 text-sm text-[#7A5260]">
-                        Projeção até o momento em que você marcar o recebimento.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-[#FDEBEC] px-3 py-1.5 font-medium text-[#B82F3E]">
-                        A receber: {brl(totalAReceber)}
-                      </span>
-                      <span className="rounded-full bg-[#FFF1F7] px-3 py-1.5 font-medium text-[#C43A72]">
-                        Recebido: {brl(totalEntradasRecebidas)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {entradas.length === 0 ? (
-                    <p className="mt-4 text-sm text-[#7A5260]">Nenhuma entrada extra lançada.</p>
-                  ) : (
-                    <div className="mt-4 space-y-3">
-                      {entradas
-                        .slice()
-                        .sort((a, b) => (a.data || "9999-12-31").localeCompare(b.data || "9999-12-31"))
-                        .map((e) => (
-                          <div key={e.id} className="rounded-2xl border border-[#F8B6D8]/70 p-4">
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                              <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <strong>{e.descricao}</strong>
-                                  <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (e.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
-                                    {e.recebido ? "Recebido" : "A receber"}
-                                  </span>
-                                </div>
-                                <p className="mt-1 text-xs text-[#7A5260]">
-                                  {e.data ? "Previsto para " + formatDate(e.data) : "Sem data prevista"}
-                                </p>
-                                {e.recebido && e.recebidoEm && (
-                                  <p className="mt-1 text-xs text-[#C43A72]">Recebido em {formatDate(e.recebidoEm)}</p>
-                                )}
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {entradas
+                      .slice()
+                      .sort((a, b) => (a.data || "9999-12-31").localeCompare(b.data || "9999-12-31"))
+                      .map((e) => (
+                        <div key={e.id} className="rounded-2xl border border-[#F8B6D8]/70 bg-white p-4">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <strong className="break-words">{e.descricao}</strong>
+                                <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (e.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
+                                  {e.recebido ? "Recebido" : "A receber"}
+                                </span>
                               </div>
+                              <p className="mt-1 text-xs text-[#7A5260]">{e.data ? "Previsto para " + formatDate(e.data) : "Sem data prevista"}</p>
+                              {e.recebido && e.recebidoEm && (
+                                <p className="mt-1 text-xs font-medium text-[#C43A72]">Recebido em {formatDate(e.recebidoEm)}</p>
+                              )}
+                            </div>
 
-                              <div className="flex flex-col gap-3 sm:items-end">
-                                <strong className={"text-xl font-bold " + (e.recebido ? "text-[#C43A72]" : "text-[#4A1F2D]")}>
-                                  {brl(e.valor)}
-                                </strong>
-                                <div className="flex w-full gap-2 sm:w-auto">
-                                  {!e.recebido && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
-                                      className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-sm font-medium text-white"
-                                    >
-                                      Receber
-                                    </button>
-                                  )}
+                            <div className="flex flex-col gap-3 sm:items-end">
+                              <strong className={"text-xl font-bold " + (e.recebido ? "text-[#C43A72]" : "text-[#4A1F2D]")}>{brl(e.valor)}</strong>
+                              <div className="flex w-full gap-2 sm:w-auto">
+                                {!e.recebido && (
                                   <button
                                     type="button"
-                                    onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
-                                    className="rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145]"
+                                    onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
+                                    className="min-h-10 flex-1 rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-sm font-medium text-white sm:flex-none"
                                   >
-                                    Excluir
+                                    Receber
                                   </button>
-                                </div>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
+                                  className="min-h-10 flex-1 rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145] sm:flex-none"
+                                >
+                                  Excluir
+                                </button>
                               </div>
                             </div>
                           </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
