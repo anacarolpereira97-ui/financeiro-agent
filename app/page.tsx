@@ -411,7 +411,7 @@ export default function Page() {
                 <div className={card}>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="font-semibold text-[#4A1F2D]">Entradas extras lançadas</h3>
+                      <h3 className="font-semibold text-[#4A1F2D]">Rendas extras lançadas</h3>
                       <p className="mt-1 text-sm text-[#7A5260]">
                         Projeção até o momento em que você marcar o recebimento.
                       </p>
