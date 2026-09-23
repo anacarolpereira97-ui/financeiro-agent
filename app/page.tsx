@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 type Gasto = { id: string; descricao: string; valor: number; forma: "avista" | "parcelado"; parcelas: number; vencimento: string };
 type Entrada = { id: string; descricao: string; valor: number; data: string };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
-type ParcelaProjetada = { gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string };
+type ParcelaProjetada = { key: string; gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string; status: "pendente" | "atrasada" | "paga" | "excluida" };
 
 const RENDA_FIXA = 1000;
 const ENTRADA_PROGRAMADA = 2300;
@@ -18,6 +18,7 @@ export default function Page() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [entradas, setEntradas] = useState<Entrada[]>([]);
   const [dividas, setDividas] = useState<Divida[]>([]);
+  const [controleParcelas, setControleParcelas] = useState<Record<string, { pago?: boolean; excluido?: boolean }>>({});
   const [carregado, setCarregado] = useState(false);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function Page() {
       setGastos(JSON.parse(localStorage.getItem("fin_gastos") || "[]"));
       setEntradas(JSON.parse(localStorage.getItem("fin_entradas") || "[]"));
       setDividas(JSON.parse(localStorage.getItem("fin_dividas") || "[]"));
+      setControleParcelas(JSON.parse(localStorage.getItem("fin_controle_parcelas") || "{}"));
     } catch {}
     setCarregado(true);
   }, []);
@@ -34,23 +36,22 @@ export default function Page() {
     localStorage.setItem("fin_gastos", JSON.stringify(gastos));
     localStorage.setItem("fin_entradas", JSON.stringify(entradas));
     localStorage.setItem("fin_dividas", JSON.stringify(dividas));
-  }, [gastos, entradas, dividas, carregado]);
+    localStorage.setItem("fin_controle_parcelas", JSON.stringify(controleParcelas));
+  }, [gastos, entradas, dividas, controleParcelas, carregado]);
 
-  const totalGastos = useMemo(() => gastos.reduce((s, g) => s + g.valor, 0), [gastos]);
   const totalEntradas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
   const hoje = new Date();
   const inicioRenda = new Date(PRIMEIRO_RECEBIMENTO + "T00:00:00");
   const rendaFixaRecebida = hoje >= inicioRenda ? RENDA_FIXA : 0;
   const entradaProgramadaRecebida = hoje >= inicioRenda ? ENTRADA_PROGRAMADA : 0;
-  const rendaTotal = rendaFixaRecebida + entradaProgramadaRecebida + totalEntradas;
-  const saldo = rendaTotal - totalGastos;
+  const totalFixoRecebido = rendaFixaRecebida + entradaProgramadaRecebida;
 
   const parcelasProjetadas = useMemo<ParcelaProjetada[]>(() => {
     const itens: ParcelaProjetada[] = [];
     for (const g of gastos) {
       const forma = g.forma || "avista";
-      const quantidade = Math.max(1, g.parcelas || 1);
-      if (forma !== "parcelado" || !g.vencimento || quantidade <= 1) continue;
+      const quantidade = forma === "parcelado" ? Math.max(1, g.parcelas || 1) : 1;
+      if (!g.vencimento) continue;
 
       const [ano, mes, dia] = g.vencimento.split("-").map(Number);
       const valorParcela = g.valor / quantidade;
@@ -61,22 +62,37 @@ export default function Page() {
         const mm = String(data.getMonth() + 1).padStart(2, "0");
         const dd = String(data.getDate()).padStart(2, "0");
 
+        const key = g.id + "__" + (i + 1);
+        const controle = controleParcelas[key] || {};
+        const vencimento = yyyy + "-" + mm + "-" + dd;
+        const vencida = new Date(vencimento + "T00:00:00") < new Date(new Date().toDateString());
+        const status = controle.excluido ? "excluida" : controle.pago ? "paga" : vencida ? "atrasada" : "pendente";
+
         itens.push({
+          key,
           gastoId: g.id,
           descricao: g.descricao,
           numero: i + 1,
           total: quantidade,
           valor: valorParcela,
-          vencimento: yyyy + "-" + mm + "-" + dd,
+          vencimento,
+          status,
         });
       }
     }
 
     return itens.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
-  }, [gastos]);
+  }, [gastos, controleParcelas]);
 
-  const proximasParcelas = parcelasProjetadas.filter((p) => new Date(p.vencimento + "T00:00:00") >= new Date(new Date().toDateString()));
+  const parcelasAtivas = parcelasProjetadas.filter((p) => p.status !== "excluida");
+  const proximasParcelas = parcelasAtivas.filter((p) => p.status === "pendente");
+  const parcelasAtrasadas = parcelasAtivas.filter((p) => p.status === "atrasada");
+  const parcelasPagas = parcelasAtivas.filter((p) => p.status === "paga");
   const totalParcelasFuturas = proximasParcelas.reduce((s, p) => s + p.valor, 0);
+  const totalAtrasado = parcelasAtrasadas.reduce((s, p) => s + p.valor, 0);
+  const totalPagoFixo = parcelasPagas.reduce((s, p) => s + p.valor, 0);
+  const saldoFixo = totalFixoRecebido - totalPagoFixo;
+  const saldoExtra = totalEntradas;
   const proximos90Dias = proximasParcelas.filter((p) => {
     const diff = new Date(p.vencimento + "T00:00:00").getTime() - Date.now();
     return diff <= 90 * 24 * 60 * 60 * 1000;
@@ -84,14 +100,14 @@ export default function Page() {
   const total90Dias = proximos90Dias.reduce((s, p) => s + p.valor, 0);
 
   const plano = useMemo(() => {
-    let caixa = Math.max(0, saldo);
+    let caixa = Math.max(0, saldoFixo);
     return [...dividas].sort((a, b) => b.prioridade - a.prioridade).map((d) => {
       const base = d.minimo > 0 ? d.minimo : d.valor;
       const pagar = Math.min(caixa, base, d.valor);
       caixa -= pagar;
       return { ...d, pagar };
     });
-  }, [dividas, saldo]);
+  }, [dividas, saldoFixo]);
 
   function addGasto(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -129,18 +145,18 @@ export default function Page() {
     e.currentTarget.reset();
   }
 
-  const card = "rounded-2xl border border-zinc-200 bg-white p-5";
+  const card = "rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm";
   const field = "mt-1 w-full rounded-xl border border-zinc-300 bg-white px-3 py-3";
 
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
-      <div className="mx-auto max-w-4xl px-4 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="rounded-3xl bg-zinc-950 p-6 text-white shadow-sm">
           <p className="text-sm text-zinc-300">Visão financeira • ciclo do dia 10 ao dia 9</p>
           <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
           <p className="mt-2 text-sm text-zinc-300">Saldo inicial: R$ 0,00. Em 10/10/2026 entram R$ 1.000,00 de renda fixa + R$ 2.300,00 programados.</p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Saldo atual</span><strong className="text-xl">{brl(saldo)}</strong></div>
+            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Saldo atual</span><strong className="text-xl">{brl(saldoFixo)}</strong></div>
             <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Extras lançados</span><strong className="text-xl">{brl(totalEntradas)}</strong></div>
             <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Parcelas futuras</span><strong className="text-xl">{brl(totalParcelasFuturas)}</strong></div>
             <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Próx. 90 dias</span><strong className="text-xl">{brl(total90Dias)}</strong></div>
@@ -168,22 +184,22 @@ export default function Page() {
 
         {aba === "painel" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Resumo titulo="Renda fixa recebida" valor={rendaFixaRecebida} />
               <Resumo titulo="R$ 2.300 programados" valor={entradaProgramadaRecebida} />
-              <Resumo titulo="Entradas extras" valor={totalEntradas} />
-              <Resumo titulo="Fixos" valor={FIXOS} />
-              <Resumo titulo="Gastos" valor={totalGastos} />
-              <Resumo titulo="Saldo" valor={saldo} escuro />
+              <Resumo titulo="Dinheiro extra separado" valor={saldoExtra} />
+              <Resumo titulo="Pago com dinheiro fixo" valor={totalPagoFixo} />
+              <Resumo titulo="Parcelas em atraso" valor={totalAtrasado} />
+              <Resumo titulo="Saldo do dinheiro fixo" valor={saldoFixo} escuro />
             </div>
 
             <div className={card}>
               <p className="text-sm text-zinc-500">Situação atual</p>
-              <h2 className={"mt-1 text-2xl font-bold " + (saldo < 0 ? "text-red-700" : saldo < 100 ? "text-amber-700" : "text-emerald-700")}>
-                {saldo < 0 ? "No vermelho" : saldo < 100 ? "Atenção" : "No azul"}
+              <h2 className={"mt-1 text-2xl font-bold " + (saldoFixo < 0 ? "text-red-700" : saldoFixo < 100 ? "text-amber-700" : "text-emerald-700")}>
+                {saldoFixo < 0 ? "Fixos no vermelho" : saldoFixo < 100 ? "Atenção no fixo" : "Fixos sob controle"}
               </h2>
               <p className="mt-2 text-sm text-zinc-600">
-                {saldo < 0 ? "Você ultrapassou sua renda disponível em " + brl(Math.abs(saldo)) + "." : "Você ainda tem " + brl(saldo) + " disponível neste ciclo."}
+                O dinheiro extra permanece separado em {brl(saldoExtra)}. Só parcelas marcadas como pagas reduzem o dinheiro fixo.
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
@@ -201,22 +217,24 @@ export default function Page() {
                 <strong>{brl(totalParcelasFuturas)}</strong>
               </div>
 
-              {proximasParcelas.length === 0 ? (
+              {(proximasParcelas.length + parcelasAtrasadas.length) === 0 ? (
                 <p className="mt-4 text-sm text-zinc-500">Nenhuma parcela futura cadastrada.</p>
               ) : (
                 <div className="mt-3 space-y-2">
-                  {proximasParcelas.slice(0, 6).map((p) => (
+                  {[...parcelasAtrasadas, ...proximasParcelas].slice(0, 8).map((p) => (
                     <div key={p.gastoId + "-" + p.numero} className="flex items-center justify-between rounded-xl bg-zinc-50 p-3">
                       <div>
                         <p className="text-sm font-medium">{p.descricao}</p>
-                        <p className="text-xs text-zinc-500">Parcela {p.numero}/{p.total} • {p.vencimento.split("-").reverse().join("/")}</p>
+                        <p className="text-xs text-zinc-500">Parcela {p.numero}/{p.total} • {p.vencimento.split("-").reverse().join("/")} • {p.status === "atrasada" ? "Em atraso" : "Pendente"}</p>
                       </div>
-                      <strong>{brl(p.valor)}</strong>
+                      <div className="flex items-center gap-2">
+                        <strong>{brl(p.valor)}</strong>
+                        <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], pago: true, excluido: false}}))} className="rounded-lg bg-zinc-950 px-2.5 py-1.5 text-xs font-medium text-white">Pagar</button>
+                        <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], excluido: true, pago: false}}))} className="rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-700">Excluir</button>
+                      </div>
                     </div>
                   ))}
-                  {proximasParcelas.length > 6 && (
-                    <p className="pt-1 text-xs text-zinc-500">+ {proximasParcelas.length - 6} parcela(s) futura(s).</p>
-                  )}
+
                 </div>
               )}
             </div>
@@ -300,17 +318,25 @@ export default function Page() {
             <div className={card + " md:col-span-2"}>
               <h2 className="text-lg font-semibold">Projeção das parcelas futuras</h2>
               <p className="mt-1 text-sm text-zinc-500">Calendário mensal calculado a partir do vencimento da 1ª parcela.</p>
-              {proximasParcelas.length === 0 ? (
-                <p className="mt-3 text-sm text-zinc-500">Nenhuma parcela futura para projetar.</p>
+              {parcelasAtivas.length === 0 ? (
+                <p className="mt-3 text-sm text-zinc-500">Nenhuma parcela para acompanhar.</p>
               ) : (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {proximasParcelas.map((p) => (
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  {parcelasAtivas.map((p) => (
                     <div key={p.gastoId + "-proj-" + p.numero} className="flex items-center justify-between rounded-xl border border-zinc-200 p-3">
                       <div>
                         <p className="text-sm font-medium">{p.descricao}</p>
-                        <p className="text-xs text-zinc-500">Parcela {p.numero}/{p.total} • vence {p.vencimento.split("-").reverse().join("/")}</p>
+                        <p className="text-xs text-zinc-500">Parcela {p.numero}/{p.total} • vence {p.vencimento.split("-").reverse().join("/")} • {p.status === "paga" ? "Paga" : p.status === "atrasada" ? "Em atraso" : "Pendente"}</p>
                       </div>
-                      <strong>{brl(p.valor)}</strong>
+                      <div className="flex items-center gap-2">
+                        <strong>{brl(p.valor)}</strong>
+                        {p.status !== "paga" && (
+                          <>
+                            <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], pago: true, excluido: false}}))} className="rounded-lg bg-zinc-950 px-2.5 py-1.5 text-xs font-medium text-white">Pagar</button>
+                            <button type="button" onClick={() => setControleParcelas((x) => ({...x, [p.key]: {...x[p.key], excluido: true, pago: false}}))} className="rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-700">Excluir</button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -359,12 +385,12 @@ export default function Page() {
           <div className="space-y-3">
             <div className={card}>
               <p className="text-sm text-zinc-500">Disponível para dívidas</p>
-              <p className="mt-1 text-3xl font-bold">{brl(Math.max(0, saldo))}</p>
+              <p className="mt-1 text-3xl font-bold">{brl(Math.max(0, saldoFixo))}</p>
             </div>
 
-            {saldo <= 0 && <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">Não há valor disponível para dívidas neste ciclo sem aumentar o déficit.</div>}
-            {saldo > 0 && dividas.length === 0 && <div className={card}>Cadastre suas dívidas atrasadas para gerar a programação.</div>}
-            {saldo > 0 && plano.map((p, i) => (
+            {saldoFixo <= 0 && <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">Não há valor disponível para dívidas neste ciclo sem aumentar o déficit.</div>}
+            {saldoFixo > 0 && dividas.length === 0 && <div className={card}>Cadastre suas dívidas atrasadas para gerar a programação.</div>}
+            {saldoFixo > 0 && plano.map((p, i) => (
               <div key={p.id} className={card}>
                 <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">Ordem {i + 1}</span>
                 <h3 className="mt-3 font-semibold">{p.nome}</h3>
@@ -381,7 +407,7 @@ export default function Page() {
 
 function Resumo({ titulo, valor, escuro = false }: { titulo: string; valor: number; escuro?: boolean }) {
   return (
-    <div className={"rounded-2xl border p-4 " + (escuro ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-200 bg-white")}>
+    <div className={"flex min-h-[150px] flex-col justify-between rounded-3xl border p-5 shadow-sm " + (escuro ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-200 bg-white")}>
       <p className="text-xs opacity-70">{titulo}</p>
       <p className="mt-1 text-xl font-bold">{brl(valor)}</p>
     </div>
