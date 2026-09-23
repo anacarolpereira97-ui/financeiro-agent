@@ -325,62 +325,7 @@ export default function Page() {
               )}
             </div>
 
-            <div className={card}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold text-[#4A1F2D]">Compromissos fixos</h2>
-                  <p className="mt-1 text-xs text-[#7A5260]">Vencimento do ciclo: dia 10. Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
-                </div>
-                <strong>{brl(690)}</strong>
-              </div>
 
-              <div className="mt-4 space-y-3">
-                {[
-                  { id: compromissosKeys.solar, nome: "Placas solares", valor: 370, detalhe: "Vencimento todo dia 10" },
-                  { id: compromissosKeys.terapia, nome: "Terapia", valor: 320, detalhe: "Vencimento todo dia 10 • 2 sessões por mês" }
-                ].map((comp) => {
-                  const pago = Boolean(controleCompromissos[comp.id]?.pago);
-                  return (
-                    <div key={comp.id} className="rounded-2xl border border-[#F8B6D8]/70 p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-medium">{comp.nome}</p>
-                            <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (pago ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
-                              {pago ? "Pago" : "Pendente"}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-sm text-[#7A5260]">{comp.detalhe}</p>
-                          {pago && controleCompromissos[comp.id]?.pagoEm && (
-                            <p className="mt-1 text-xs text-[#C43A72]">Pago em {String(controleCompromissos[comp.id]?.pagoEm).split("-").reverse().join("/")}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <strong>{brl(comp.valor)}</strong>
-                          {!pago ? (
-                            <button
-                              type="button"
-                              onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
-                              className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
-                            >
-                              Pagar
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: false}}))}
-                              className="rounded-xl border border-[#F8B6D8]/70 px-3 py-2 text-xs font-medium text-[#6A3145]"
-                            >
-                              Desfazer
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         )}
 
@@ -516,6 +461,62 @@ export default function Page() {
 
         {aba === "gastos" && (
           <div className="grid gap-4 md:grid-cols-2">
+            <div className={card + " md:col-span-2"}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-[#4A1F2D]">Compromissos fixos</h2>
+                  <p className="mt-1 text-xs text-[#7A5260]">Vencimento do ciclo: dia 10. Só reduzem o dinheiro fixo quando você clicar em Pagar.</p>
+                </div>
+                <strong>{brl(690)}</strong>
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                {[
+                  { id: compromissosKeys.solar, nome: "Placas solares", valor: 370, detalhe: "Vencimento todo dia 10" },
+                  { id: compromissosKeys.terapia, nome: "Terapia", valor: 320, detalhe: "Vencimento todo dia 10 • 2 sessões por mês" }
+                ].map((comp) => {
+                  const pago = Boolean(controleCompromissos[comp.id]?.pago);
+                  return (
+                    <div key={comp.id} className="rounded-2xl border border-[#F8B6D8]/70 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{comp.nome}</p>
+                            <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (pago ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
+                              {pago ? "Pago" : "Pendente"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-[#7A5260]">{comp.detalhe}</p>
+                          {pago && controleCompromissos[comp.id]?.pagoEm && (
+                            <p className="mt-1 text-xs text-[#C43A72]">Pago em {String(controleCompromissos[comp.id]?.pagoEm).split("-").reverse().join("/")}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <strong>{brl(comp.valor)}</strong>
+                          {!pago ? (
+                            <button
+                              type="button"
+                              onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: true, pagoEm: new Date().toISOString().slice(0,10)}}))}
+                              className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-3 py-2 text-xs font-medium text-white"
+                            >
+                              Pagar
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setControleCompromissos((x) => ({...x, [comp.id]: {pago: false}}))}
+                              className="rounded-xl border border-[#F8B6D8]/70 px-3 py-2 text-xs font-medium text-[#6A3145]"
+                            >
+                              Desfazer
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <form onSubmit={addGasto} className={card + " space-y-3"}>
               <h2 className="text-lg font-semibold text-[#4A1F2D]">Lançar gasto</h2>
               <label className="block text-sm">Descrição<input name="descricao" required className={field} placeholder="Ex.: mercado" /></label>
