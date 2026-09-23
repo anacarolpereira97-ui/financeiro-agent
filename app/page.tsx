@@ -207,7 +207,6 @@ export default function Page() {
         <div className="my-5 flex gap-2 overflow-x-auto">
           {[
             ["painel","Painel"],
-            ["programadas","Entrada programada"],
             ["entradas","Entradas"],
             ["gastos","Gastos"],
             ["dividas","Dívidas atrasadas"],
@@ -329,132 +328,159 @@ export default function Page() {
           </div>
         )}
 
-        {aba === "programadas" && (
+        {aba === "entradas" && (
           <div className="space-y-5">
             <div className={card}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-[#4A1F2D]">Projeção de entradas</h2>
+                  <h2 className="text-lg font-semibold text-[#4A1F2D]">Entradas</h2>
                   <p className="mt-1 text-sm text-[#7A5260]">
-                    Aqui é somente projeção. Apenas a renda fixa entra automaticamente no caixa no dia 10. Honorários entram somente quando você marcar como recebido.
+                    À esquerda fica a renda fixa projetada. À direita ficam os honorários e demais entradas extras.
                   </p>
                 </div>
-                <div className="rounded-2xl bg-[#FFF1F7] px-4 py-3 text-sm">
-                  <span className="block text-[#7A5260]">Próximo fixo</span>
-                  <strong className="text-[#C43A72]">{brl(RENDA_FIXA)}</strong>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-[#FFF1F7] px-3 py-2 font-medium text-[#C43A72]">
+                    Extra recebido: {brl(totalEntradasRecebidas)}
+                  </span>
+                  <span className="rounded-full bg-[#FDEBEC] px-3 py-2 font-medium text-[#B82F3E]">
+                    A receber: {brl(totalAReceber)}
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-5 lg:grid-cols-2">
-              <div className={card}>
-                <h3 className="font-semibold text-[#4A1F2D]">Renda fixa projetada</h3>
-                <p className="mt-1 text-sm text-[#7A5260]">R$ 1.000,00 todo dia 10.</p>
-                <div className="mt-4 space-y-3">
-                  {proximosRecebimentosFixos.map((item) => (
-                    <div key={item.data} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4">
-                      <div>
-                        <p className="font-medium">Renda fixa mensal</p>
-                        <p className="mt-1 text-xs text-[#7A5260]">Prevista para {formatDate(item.data)}</p>
-                      </div>
-                      <strong>{brl(item.valor)}</strong>
+              <div className="space-y-5">
+                <div className={card}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-[#4A1F2D]">Renda fixa projetada</h3>
+                      <p className="mt-1 text-sm text-[#7A5260]">
+                        R$ 1.000,00 todo dia 10. Entra automaticamente no caixa quando chegar a data.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className={card}>
-                <h3 className="font-semibold text-[#4A1F2D]">Honorários lançados</h3>
-                <p className="mt-1 text-sm text-[#7A5260]">Apenas projeção até você clicar em Receber na aba Entradas.</p>
-                {entradas.length === 0 ? (
-                  <p className="mt-4 text-sm text-[#7A5260]">Nenhum honorário lançado.</p>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {entradas
-                      .slice()
-                      .sort((a, b) => (a.data || "9999-12-31").localeCompare(b.data || "9999-12-31"))
-                      .map((entrada) => (
-                        <div key={entrada.id} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-white p-4">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="font-medium">{entrada.descricao}</p>
-                              <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (entrada.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
-                                {entrada.recebido ? "Recebido" : "Projetado"}
-                              </span>
-                            </div>
-                            <p className="mt-1 text-xs text-[#7A5260]">
-                              {entrada.data ? "Previsto para " + formatDate(entrada.data) : "Sem data prevista"}
-                            </p>
-                          </div>
-                          <strong>{brl(entrada.valor)}</strong>
-                        </div>
-                      ))}
+                    <strong className="text-[#C43A72]">{brl(RENDA_FIXA)}</strong>
                   </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
-        {aba === "entradas" && (
-          <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-            <form onSubmit={addEntrada} className={card + " space-y-3"}>
-              <h2 className="text-lg font-semibold text-[#4A1F2D]">Lançar entrada de dinheiro</h2>
-              <label className="block text-sm">Descrição<input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" /></label>
-              <label className="block text-sm">Valor (R$)<input name="valor" required type="number" step="0.01" min="0.01" className={field} /></label>
-              <label className="block text-sm">Data prevista do pagamento<input name="data" type="date" className={field} /><span className="mt-1 block text-xs text-[#7A5260]">Esta data é apenas uma previsão. O valor só entra no caixa quando você clicar em Receber.</span></label>
-              <button className="w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">Adicionar entrada</button>
-            </form>
-
-            <div className={card}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-[#4A1F2D]">Entradas extras</h2>
-                  <p className="mt-1 text-sm text-[#7A5260]">Lançar não altera o caixa. Clique em Receber quando o pagamento realmente entrar.</p>
-                </div>
-                <div className="flex gap-2 text-xs">
-                  <span className="rounded-full bg-[#FDEBEC] px-3 py-1.5 font-medium text-[#B82F3E]">A receber: {brl(totalAReceber)}</span>
-                  <span className="rounded-full bg-[#FFF1F7] px-3 py-1.5 font-medium text-[#C43A72]">Recebido: {brl(totalEntradasRecebidas)}</span>
+                  <div className="mt-4 space-y-3">
+                    {proximosRecebimentosFixos.map((item) => (
+                      <div key={item.data} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4">
+                        <div>
+                          <p className="font-medium">Renda fixa mensal</p>
+                          <p className="mt-1 text-xs text-[#7A5260]">Prevista para {formatDate(item.data)}</p>
+                        </div>
+                        <strong>{brl(item.valor)}</strong>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              {entradas.length === 0 && <p className="mt-3 text-sm text-[#7A5260]">Nenhuma entrada extra lançada.</p>}
-              {entradas.map((e) => (
-                <div key={e.id} className="rounded-2xl border border-[#F8B6D8]/70 p-4">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+              <div className="space-y-5">
+                <form onSubmit={addEntrada} className={card + " space-y-3"}>
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <strong>{e.descricao}</strong>
-                      <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (e.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
-                        {e.recebido ? "Recebido" : "A receber"}
+                    <h3 className="font-semibold text-[#4A1F2D]">Nova entrada extra</h3>
+                    <p className="mt-1 text-sm text-[#7A5260]">
+                      Lance honorários ou outros valores. Eles só entram no caixa quando você clicar em Receber.
+                    </p>
+                  </div>
+
+                  <label className="block text-sm">
+                    Descrição
+                    <input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" />
+                  </label>
+
+                  <label className="block text-sm">
+                    Valor (R$)
+                    <input name="valor" required type="number" step="0.01" min="0.01" className={field} />
+                  </label>
+
+                  <label className="block text-sm">
+                    Data prevista do pagamento
+                    <input name="data" type="date" className={field} />
+                    <span className="mt-1 block text-xs text-[#7A5260]">
+                      Esta data é apenas uma previsão.
+                    </span>
+                  </label>
+
+                  <button className="w-full rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-3 font-semibold text-white shadow-sm shadow-[#F8B6D8]/70 transition hover:from-[#E73B99] hover:to-[#C93040]">
+                    Adicionar entrada
+                  </button>
+                </form>
+
+                <div className={card}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-semibold text-[#4A1F2D]">Entradas extras lançadas</h3>
+                      <p className="mt-1 text-sm text-[#7A5260]">
+                        Projeção até o momento em que você marcar o recebimento.
+                      </p>
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      <span className="rounded-full bg-[#FDEBEC] px-3 py-1.5 font-medium text-[#B82F3E]">
+                        A receber: {brl(totalAReceber)}
+                      </span>
+                      <span className="rounded-full bg-[#FFF1F7] px-3 py-1.5 font-medium text-[#C43A72]">
+                        Recebido: {brl(totalEntradasRecebidas)}
                       </span>
                     </div>
-                    {e.data && <p className="mt-1 text-xs text-[#7A5260]">Previsto para {e.data.split("-").reverse().join("/")}</p>}
-                    {e.recebido && e.recebidoEm && <p className="mt-1 text-xs text-[#C43A72]">Recebido em {e.recebidoEm.split("-").reverse().join("/")}</p>}
                   </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                    <strong className={"text-2xl font-bold " + (e.recebido ? "text-[#C43A72]" : "text-[#4A1F2D]")}>{brl(e.valor)}</strong>
-                    <div className="flex flex-nowrap gap-2">
-                      {!e.recebido && (
-                        <button
-                          type="button"
-                          onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
-                          className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-sm font-medium text-white"
-                        >
-                          Receber
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
-                        className="rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145]"
-                      >
-                        Excluir
-                      </button>
+
+                  {entradas.length === 0 ? (
+                    <p className="mt-4 text-sm text-[#7A5260]">Nenhuma entrada extra lançada.</p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {entradas
+                        .slice()
+                        .sort((a, b) => (a.data || "9999-12-31").localeCompare(b.data || "9999-12-31"))
+                        .map((e) => (
+                          <div key={e.id} className="rounded-2xl border border-[#F8B6D8]/70 p-4">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <strong>{e.descricao}</strong>
+                                  <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (e.recebido ? "bg-[#FFF1F7] text-[#C43A72]" : "bg-[#FDEBEC] text-[#B82F3E]")}>
+                                    {e.recebido ? "Recebido" : "A receber"}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs text-[#7A5260]">
+                                  {e.data ? "Previsto para " + formatDate(e.data) : "Sem data prevista"}
+                                </p>
+                                {e.recebido && e.recebidoEm && (
+                                  <p className="mt-1 text-xs text-[#C43A72]">Recebido em {formatDate(e.recebidoEm)}</p>
+                                )}
+                              </div>
+
+                              <div className="flex flex-col gap-3 sm:items-end">
+                                <strong className={"text-xl font-bold " + (e.recebido ? "text-[#C43A72]" : "text-[#4A1F2D]")}>
+                                  {brl(e.valor)}
+                                </strong>
+                                <div className="flex gap-2">
+                                  {!e.recebido && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
+                                      className="rounded-xl bg-gradient-to-r from-[#F04AA8] to-[#D93A4A] px-4 py-2 text-sm font-medium text-white"
+                                    >
+                                      Receber
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
+                                    className="rounded-xl border border-[#F8B6D8]/70 px-4 py-2 text-sm font-medium text-[#6A3145]"
+                                  >
+                                    Excluir
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                     </div>
-                  </div>
+                  )}
                 </div>
-                </div>
-              ))}
+              </div>
             </div>
           </div>
         )}
