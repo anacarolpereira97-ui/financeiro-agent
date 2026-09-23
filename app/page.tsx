@@ -8,7 +8,8 @@ type Divida = { id: string; nome: string; valor: number; minimo: number; priorid
 type ParcelaProjetada = { key: string; gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string; status: "pendente" | "atrasada" | "paga" | "excluida" };
 
 const RENDA_FIXA = 1000;
-const PRIMEIRO_RECEBIMENTO = "2026-10-10";
+const PRIMEIRO_ANO_RENDA = 2026;
+const PRIMEIRO_MES_RENDA = 9; // outubro (0 = janeiro)
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
 function isoDate(date: Date) {
@@ -20,6 +21,72 @@ function isoDate(date: Date) {
 
 function formatDate(value: string) {
   return value ? value.split("-").reverse().join("/") : "—";
+}
+
+function easterSunday(year: number) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const cc = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(cc / 4);
+  const k = cc % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function holidaySet(year: number) {
+  const dates = [
+    new Date(year, 0, 1),
+    new Date(year, 3, 21),
+    new Date(year, 4, 1),
+    new Date(year, 8, 7),
+    new Date(year, 9, 11), // Criação do Estado de Mato Grosso do Sul
+    new Date(year, 9, 12),
+    new Date(year, 10, 2),
+    new Date(year, 10, 15),
+    new Date(year, 10, 20),
+    new Date(year, 11, 25),
+  ];
+
+  const easter = easterSunday(year);
+  const goodFriday = new Date(easter);
+  goodFriday.setDate(easter.getDate() - 2);
+  dates.push(goodFriday);
+
+  return new Set(dates.map(isoDate));
+}
+
+function isBusinessDay(date: Date) {
+  const day = date.getDay();
+  if (day === 0 || day === 6) return false;
+  return !holidaySet(date.getFullYear()).has(isoDate(date));
+}
+
+function fifthBusinessDay(year: number, month: number) {
+  const normalized = new Date(year, month, 1);
+  const targetYear = normalized.getFullYear();
+  const targetMonth = normalized.getMonth();
+  let count = 0;
+
+  for (let day = 1; day <= 31; day++) {
+    const date = new Date(targetYear, targetMonth, day);
+    if (date.getMonth() !== targetMonth) break;
+    if (isBusinessDay(date)) count += 1;
+    if (count === 5) return date;
+  }
+
+  return new Date(targetYear, targetMonth, 1);
+}
+
+function monthIsOnOrAfterFirstIncome(year: number, month: number) {
+  return year > PRIMEIRO_ANO_RENDA || (year === PRIMEIRO_ANO_RENDA && month >= PRIMEIRO_MES_RENDA);
 }
 
 export default function Page() {
@@ -55,22 +122,39 @@ export default function Page() {
   const totalAReceber = useMemo(() => entradas.filter((e) => !e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
   const hoje = new Date();
   const hojeInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  const inicioRenda = new Date(PRIMEIRO_RECEBIMENTO + "T00:00:00");
   const inicioCiclo = hoje.getDate() >= 10
     ? new Date(hoje.getFullYear(), hoje.getMonth(), 10)
     : new Date(hoje.getFullYear(), hoje.getMonth() - 1, 10);
   const fimCiclo = new Date(inicioCiclo.getFullYear(), inicioCiclo.getMonth() + 1, 9);
   const cicloKey = inicioCiclo.getFullYear() + "-" + String(inicioCiclo.getMonth() + 1).padStart(2, "0");
-  const rendaFixaRecebida = inicioCiclo >= inicioRenda && hojeInicio >= inicioCiclo ? RENDA_FIXA : 0;
+
+  const quintoDiaUtilAtual = fifthBusinessDay(hoje.getFullYear(), hoje.getMonth());
+  const rendaFixaRecebida =
+    monthIsOnOrAfterFirstIncome(hoje.getFullYear(), hoje.getMonth()) &&
+    hojeInicio >= quintoDiaUtilAtual
+      ? RENDA_FIXA
+      : 0;
   const totalFixoRecebido = rendaFixaRecebida;
 
   const proximosRecebimentosFixos = Array.from({ length: 6 }, (_, index) => {
-    const base = hojeInicio < inicioRenda ? inicioRenda : new Date(
-      hoje.getFullYear(),
-      hoje.getMonth() + (hoje.getDate() >= 10 ? 1 : 0),
-      10
-    );
-    const data = new Date(base.getFullYear(), base.getMonth() + index, 10);
+    let baseYear = hoje.getFullYear();
+    let baseMonth = hoje.getMonth();
+
+    if (!monthIsOnOrAfterFirstIncome(baseYear, baseMonth)) {
+      baseYear = PRIMEIRO_ANO_RENDA;
+      baseMonth = PRIMEIRO_MES_RENDA;
+    } else {
+      const atual = fifthBusinessDay(baseYear, baseMonth);
+      if (hojeInicio >= atual) {
+        baseMonth += 1;
+        if (baseMonth > 11) {
+          baseMonth = 0;
+          baseYear += 1;
+        }
+      }
+    }
+
+    const data = fifthBusinessDay(baseYear, baseMonth + index);
     return { data: isoDate(data), valor: RENDA_FIXA };
   });
 
@@ -195,7 +279,7 @@ export default function Page() {
         <div className="rounded-[32px] bg-gradient-to-br from-[#F04AA8] via-[#E64B78] to-[#D93A4A] p-6 text-white shadow-lg shadow-[#F8B6D8]/60">
           <p className="text-sm text-[#FFEAF4]">Visão financeira • ciclo do dia 10 ao dia 9</p>
           <h1 className="mt-1 text-3xl font-bold">Minha IA Financeira</h1>
-          <p className="mt-2 text-sm text-[#FFEAF4]">Saldo inicial: R$ 0,00. A renda fixa de R$ 1.000,00 entra automaticamente no caixa todo dia 10, a partir de 10/10/2026.</p>
+          <p className="mt-2 text-sm text-[#FFEAF4]">Saldo inicial: R$ 0,00. A renda fixa de R$ 1.000,00 entra automaticamente no caixa no 5º dia útil de cada mês, a partir de outubro/2026.</p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Dinheiro em caixa</span><strong className="text-xl">{brl(dinheiroCaixa)}</strong></div>
             <div className="rounded-2xl bg-white/15 p-3"><span className="block text-xs text-[#FFEAF4]">Extra recebido</span><strong className="text-xl">{brl(totalEntradasRecebidas)}</strong><span className="mt-1 block text-xs text-[#FFEAF4]/80">A receber: {brl(totalAReceber)}</span></div>
@@ -356,7 +440,7 @@ export default function Page() {
                     <div>
                       <h3 className="font-semibold text-[#4A1F2D]">Renda fixa projetada</h3>
                       <p className="mt-1 text-sm text-[#7A5260]">
-                        R$ 1.000,00 todo dia 10. Entra automaticamente no caixa quando chegar a data.
+                        R$ 1.000,00 no 5º dia útil de cada mês. O sistema pula sábados, domingos e feriados e adiciona automaticamente ao caixa quando a data chegar.
                       </p>
                     </div>
                     <strong className="text-[#C43A72]">{brl(RENDA_FIXA)}</strong>
@@ -367,7 +451,7 @@ export default function Page() {
                       <div key={item.data} className="flex items-center justify-between rounded-2xl border border-[#F8B6D8]/70 bg-[#FFF1F7]/70 p-4">
                         <div>
                           <p className="font-medium">Renda fixa mensal</p>
-                          <p className="mt-1 text-xs text-[#7A5260]">Prevista para {formatDate(item.data)}</p>
+                          <p className="mt-1 text-xs text-[#7A5260]">5º dia útil calculado: {formatDate(item.data)}</p>
                         </div>
                         <strong>{brl(item.valor)}</strong>
                       </div>
