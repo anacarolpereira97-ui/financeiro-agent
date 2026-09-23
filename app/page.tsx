@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Gasto = { id: string; descricao: string; valor: number; forma: "avista" | "parcelado"; parcelas: number; vencimento: string };
-type Entrada = { id: string; descricao: string; valor: number; data: string };
+type Entrada = { id: string; descricao: string; valor: number; data: string; recebido?: boolean; recebidoEm?: string };
 type Divida = { id: string; nome: string; valor: number; minimo: number; prioridade: number };
 type ParcelaProjetada = { key: string; gastoId: string; descricao: string; numero: number; total: number; valor: number; vencimento: string; status: "pendente" | "atrasada" | "paga" | "excluida" };
 
@@ -39,7 +39,9 @@ export default function Page() {
     localStorage.setItem("fin_controle_parcelas", JSON.stringify(controleParcelas));
   }, [gastos, entradas, dividas, controleParcelas, carregado]);
 
-  const totalEntradas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
+  const totalEntradasLancadas = useMemo(() => entradas.reduce((s, e) => s + e.valor, 0), [entradas]);
+  const totalEntradasRecebidas = useMemo(() => entradas.filter((e) => e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
+  const totalAReceber = useMemo(() => entradas.filter((e) => !e.recebido).reduce((s, e) => s + e.valor, 0), [entradas]);
   const hoje = new Date();
   const inicioRenda = new Date(PRIMEIRO_RECEBIMENTO + "T00:00:00");
   const rendaFixaRecebida = hoje >= inicioRenda ? RENDA_FIXA : 0;
@@ -92,7 +94,7 @@ export default function Page() {
   const totalAtrasado = parcelasAtrasadas.reduce((s, p) => s + p.valor, 0);
   const totalPagoFixo = parcelasPagas.reduce((s, p) => s + p.valor, 0);
   const saldoFixo = totalFixoRecebido - totalPagoFixo;
-  const saldoExtra = totalEntradas;
+  const saldoExtra = totalEntradasRecebidas;
   const proximos90Dias = proximasParcelas.filter((p) => {
     const diff = new Date(p.vencimento + "T00:00:00").getTime() - Date.now();
     return diff <= 90 * 24 * 60 * 60 * 1000;
@@ -129,7 +131,7 @@ export default function Page() {
     const valor = Number(f.get("valor"));
     const data = String(f.get("data") || "");
     if (!descricao || !Number.isFinite(valor) || valor <= 0) return;
-    setEntradas((x) => [...x, { id: crypto.randomUUID(), descricao, valor, data }]);
+    setEntradas((x) => [...x, { id: crypto.randomUUID(), descricao, valor, data, recebido: false }]);
     e.currentTarget.reset();
   }
 
@@ -157,7 +159,7 @@ export default function Page() {
           <p className="mt-2 text-sm text-zinc-300">Saldo inicial: R$ 0,00. Em 10/10/2026 entram R$ 1.000,00 de renda fixa + R$ 2.300,00 programados.</p>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Saldo atual</span><strong className="text-xl">{brl(saldoFixo)}</strong></div>
-            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Extras lançados</span><strong className="text-xl">{brl(totalEntradas)}</strong></div>
+            <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Extra recebido</span><strong className="text-xl">{brl(totalEntradasRecebidas)}</strong><span className="mt-1 block text-xs text-zinc-400">A receber: {brl(totalAReceber)}</span></div>
             <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Parcelas futuras</span><strong className="text-xl">{brl(totalParcelasFuturas)}</strong></div>
             <div className="rounded-2xl bg-white/10 p-3"><span className="block text-xs text-zinc-300">Próx. 90 dias</span><strong className="text-xl">{brl(total90Dias)}</strong></div>
           </div>
@@ -184,10 +186,11 @@ export default function Page() {
 
         {aba === "painel" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Resumo titulo="Renda fixa recebida" valor={rendaFixaRecebida} />
               <Resumo titulo="R$ 2.300 programados" valor={entradaProgramadaRecebida} />
-              <Resumo titulo="Dinheiro extra separado" valor={saldoExtra} />
+              <Resumo titulo="Dinheiro extra recebido" valor={saldoExtra} />
+              <Resumo titulo="Entradas extras a receber" valor={totalAReceber} />
               <Resumo titulo="Pago com dinheiro fixo" valor={totalPagoFixo} />
               <Resumo titulo="Parcelas em atraso" valor={totalAtrasado} />
               <Resumo titulo="Saldo do dinheiro fixo" valor={saldoFixo} escuro />
@@ -199,12 +202,12 @@ export default function Page() {
                 {saldoFixo < 0 ? "Fixos no vermelho" : saldoFixo < 100 ? "Atenção no fixo" : "Fixos sob controle"}
               </h2>
               <p className="mt-2 text-sm text-zinc-600">
-                O dinheiro extra permanece separado em {brl(saldoExtra)}. Só parcelas marcadas como pagas reduzem o dinheiro fixo.
+                O dinheiro extra disponível é {brl(saldoExtra)}. Entradas apenas lançadas ficam em “A receber” e só entram no caixa quando você clicar em Receber.
               </p>
               <div className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Renda fixa recebida</span><strong>{brl(rendaFixaRecebida)}</strong></div>
                 <div className="rounded-xl bg-zinc-100 p-3"><span className="block text-zinc-500">Entrada programada</span><strong>{brl(entradaProgramadaRecebida)}</strong></div>
-                <div className="rounded-xl bg-emerald-50 p-3"><span className="block text-zinc-500">Entradas extras</span><strong className="text-emerald-700">{brl(totalEntradas)}</strong></div>
+                <div className="rounded-xl bg-emerald-50 p-3"><span className="block text-zinc-500">Extra recebido</span><strong className="text-emerald-700">{brl(totalEntradasRecebidas)}</strong></div>
               </div>
             </div>
 
@@ -254,23 +257,52 @@ export default function Page() {
               <h2 className="text-lg font-semibold">Lançar entrada de dinheiro</h2>
               <label className="block text-sm">Descrição<input name="descricao" required className={field} placeholder="Ex.: honorários advocatícios" /></label>
               <label className="block text-sm">Valor (R$)<input name="valor" required type="number" step="0.01" min="0.01" className={field} /></label>
-              <label className="block text-sm">Data<input name="data" type="date" className={field} /></label>
+              <label className="block text-sm">Data prevista do pagamento<input name="data" type="date" className={field} /><span className="mt-1 block text-xs text-zinc-500">Esta data é apenas uma previsão. O valor só entra no caixa quando você clicar em Receber.</span></label>
               <button className="w-full rounded-xl bg-zinc-950 px-4 py-3 font-semibold text-white">Adicionar entrada</button>
             </form>
 
             <div className={card}>
-              <h2 className="text-lg font-semibold">Entradas extras deste ciclo</h2>
-              <p className="mt-1 text-sm text-zinc-500">Aqui aparecem somente valores avulsos. Sua renda fixa de {brl(RENDA_FIXA)} só entra no saldo a partir de 10/10/2026.</p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">Entradas extras</h2>
+                  <p className="mt-1 text-sm text-zinc-500">Lançar não altera o caixa. Clique em Receber quando o pagamento realmente entrar.</p>
+                </div>
+                <div className="flex gap-2 text-xs">
+                  <span className="rounded-full bg-amber-50 px-3 py-1.5 font-medium text-amber-700">A receber: {brl(totalAReceber)}</span>
+                  <span className="rounded-full bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700">Recebido: {brl(totalEntradasRecebidas)}</span>
+                </div>
+              </div>
               {entradas.length === 0 && <p className="mt-3 text-sm text-zinc-500">Nenhuma entrada extra lançada.</p>}
               {entradas.map((e) => (
-                <div key={e.id} className="flex items-center justify-between border-b border-zinc-100 py-3">
+                <div key={e.id} className="flex flex-col gap-3 border-b border-zinc-100 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <strong>{e.descricao}</strong>
-                    {e.data && <p className="text-xs text-zinc-500">{e.data.split("-").reverse().join("/")}</p>}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong>{e.descricao}</strong>
+                      <span className={"rounded-full px-2.5 py-1 text-xs font-medium " + (e.recebido ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+                        {e.recebido ? "Recebido" : "A receber"}
+                      </span>
+                    </div>
+                    {e.data && <p className="mt-1 text-xs text-zinc-500">Previsto para {e.data.split("-").reverse().join("/")}</p>}
+                    {e.recebido && e.recebidoEm && <p className="mt-1 text-xs text-emerald-700">Recebido em {e.recebidoEm.split("-").reverse().join("/")}</p>}
                   </div>
-                  <div>
-                    <strong className="text-emerald-700">+ {brl(e.valor)}</strong>
-                    <button type="button" onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))} className="ml-3 text-xs text-red-700">Excluir</button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className={e.recebido ? "text-emerald-700" : "text-zinc-800"}>{brl(e.valor)}</strong>
+                    {!e.recebido && (
+                      <button
+                        type="button"
+                        onClick={() => setEntradas((x) => x.map((i) => i.id === e.id ? {...i, recebido: true, recebidoEm: new Date().toISOString().slice(0,10)} : i))}
+                        className="rounded-lg bg-zinc-950 px-3 py-2 text-xs font-medium text-white"
+                      >
+                        Receber
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setEntradas((x) => x.filter((i) => i.id !== e.id))}
+                      className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-700"
+                    >
+                      Excluir
+                    </button>
                   </div>
                 </div>
               ))}
